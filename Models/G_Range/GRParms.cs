@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Linq;
 
 namespace Models
@@ -1153,8 +1154,13 @@ namespace Models
         private void LoadParms()
         {
             parmArray = new Parms[15];
+
             // Read in the whole parameter file as one big string
-            string allParmData = Properties.Resources.ResourceManager.GetString("GRangeLandUnits");
+            string allParmData;
+            if (String.IsNullOrEmpty(ParameterFileName))
+                allParmData = Properties.Resources.ResourceManager.GetString("GRangeLandUnits");
+            else
+                allParmData = File.ReadAllText(ParameterFileName);
             // Split the string into lines
             string[] longParmStrings = allParmData.Split(new string[] { "\r\n", "\n" }, StringSplitOptions.None);
             // Extract only the first part of each line

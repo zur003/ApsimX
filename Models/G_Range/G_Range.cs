@@ -1418,9 +1418,17 @@ namespace Models
         /// Gets or sets the file name. Should be relative filename where possible.
         /// </summary>
         [Summary]
+        [Display(Type = DisplayType.FileName)]
         [Description("G_Range database file name")]
         public string DatabaseName { get; set; }
 
+        /// <summary>
+        /// Gets or sets the file name. Should be relative filename where possible.
+        /// </summary>
+        [Summary]
+        [Display(Type = DisplayType.FileName)]
+        [Description("G_Range parameter file (blank for default values)")]
+        public string ParameterFileName { get; set; } = String.Empty;
         /// <summary>
         /// Gets or sets the number of years to spinup the model
         /// </summary>
