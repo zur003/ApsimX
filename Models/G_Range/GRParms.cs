@@ -1158,7 +1158,9 @@ namespace Models
             // Read in the whole parameter file as one big string
             string allParmData;
             if (String.IsNullOrEmpty(ParameterFileName))
-                allParmData = Properties.Resources.ResourceManager.GetString("GRangeLandUnits");
+            {
+                allParmData =  ReflectionUtilities.GetResourceAsString("Models.Resources.GRangeLandUnits.txt");
+            }
             else
                 allParmData = File.ReadAllText(ParameterFileName);
             // Split the string into lines
