@@ -125,7 +125,7 @@ namespace Models
         /// <summary>Gets the LAI</summary>
         [Description("Leaf Area Index (m^2/m^2)")]
         [Units("m^2/m^2")]
-        public double LAI { get { return 1.7; } }
+        public double LAI { get { return 1.7; } set { } }
 
         /// <summary>Gets the LAI live + dead (m^2/m^2)</summary>
         public double LAITotal { get { return LAI; } }
