@@ -132,6 +132,7 @@
     <Reference Include="System.Configuration" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="AgPasture\SimpleGrazing.cs" />
     <Compile Include="AgPasture\PastureSpecies.cs" />
     <Compile Include="AgPasture\PastureAboveGroundOrgan.cs" />
     <Compile Include="AgPasture\PastureBelowGroundOrgan.cs" />
@@ -149,6 +150,7 @@
     <Compile Include="CLEM\Activities\FinanceActivityIncome.cs" />
     <Compile Include="CLEM\Activities\LabourActivityFeedTarget.cs" />
     <Compile Include="CLEM\Activities\LabourActivityFeedToTargets.cs" />
+    <Compile Include="CLEM\Activities\LabourActivityFeedToTargetsV1.cs" />
     <Compile Include="CLEM\Activities\LabourActivityPayHired.cs" />
     <Compile Include="CLEM\Activities\LabourActivityFeed.cs" />
     <Compile Include="CLEM\Activities\LabourAERelationship.cs" />
@@ -255,12 +257,17 @@
     <Compile Include="Functions\EndOfDayFunction.cs" />
     <Compile Include="Functions\LiveOnEventFunction.cs" />
     <Compile Include="Graph\DefaultPainter.cs" />
+    <Compile Include="Graph\ShadedBarsOnGraph.cs" />
     <Compile Include="Graph\GraphPanel.cs" />
     <Compile Include="Graph\IGraphPanelScript.cs" />
     <Compile Include="Graph\ISeriesDefinitionPainter.cs" />
     <Compile Include="Graph\MultiDescriptorPainter.cs" />
     <Compile Include="Graph\SequentialPainter.cs" />
     <Compile Include="Graph\SeriesDefinition.cs" />
+    <Compile Include="Lifecycle\PlantAssimilateConsumption.cs" />
+    <Compile Include="Lifecycle\PlantOrganFunctionalDimensionReduction.cs" />
+    <Compile Include="Lifecycle\PlantOrganConsumption.cs" />
+    <Compile Include="Lifecycle\PlantMortality.cs" />
     <Compile Include="Interfaces\ILeaf.cs" />
     <Compile Include="Plant\Arbitrator\RetranslocateAvailableN.cs" />
     <Compile Include="Factorial\CompositeFactor.cs" />
