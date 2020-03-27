@@ -273,9 +273,8 @@
     <Compile Include="Graph\MultiDescriptorPainter.cs" />
     <Compile Include="Graph\SequentialPainter.cs" />
     <Compile Include="Graph\SeriesDefinition.cs" />
-    <Compile Include="Lifecycle\ILifeStageProcess.cs" />
-    <Compile Include="Lifecycle\LifeStageTransfer.cs" />
-    <Compile Include="Lifecycle\LifeStageGrowth.cs" />
+    <Compile Include="Lifecycle\IInfest.cs" />
+    <Compile Include="Lifecycle\Infestation.cs" />
     <Compile Include="Lifecycle\PlantAssimilateConsumption.cs" />
     <Compile Include="Lifecycle\PlantOrganFunctionalDimensionReduction.cs" />
     <Compile Include="Lifecycle\PlantOrganConsumption.cs" />
@@ -308,6 +307,8 @@
     <EmbeddedResource Include="Resources\Scripts\GraphPanelScriptTemplate.cs" />
     <EmbeddedResource Include="Resources\Scripts\CSharpExpressionTemplate.cs" />
     <Compile Include="Plant\Phenology\Scales\ZadokPMFWheat.cs" />
+    <Compile Include="Report\SimpleReportColumn.cs" />
+    <Compile Include="Report\VariableGroup.cs" />
     <Compile Include="Soils\Nutrients\INutrientPool.cs" />
     <Compile Include="Soils\SoilTemp\SoilTemperature.cs" />
     <Compile Include="Soils\Standardiser\Layers.cs" />
@@ -357,7 +358,6 @@
     <Compile Include="Sensitivity\SensitivityParameter.cs" />
     <Compile Include="Sensitivity\Sobol.cs" />
     <Compile Include="Sensitivity\Morris.cs" />
-    <Compile Include="Lifecycle\LifeStageImmigration.cs" />
     <Compile Include="Functions\AccumulateByDate.cs" />
     <Compile Include="Functions\AccumulateByNumericPhase.cs" />
     <Compile Include="Functions\TrackerFunction.cs" />
@@ -407,9 +407,7 @@
     <Compile Include="Interfaces\IWeather.cs" />
     <Compile Include="Lifecycle\Cohort.cs" />
     <Compile Include="Lifecycle\LifeCycle.cs" />
-    <Compile Include="Lifecycle\LifeStage.cs" />
-    <Compile Include="Lifecycle\LifeStageMortality.cs" />
-    <Compile Include="Lifecycle\LifeStageReproduction.cs" />
+    <Compile Include="Lifecycle\LifeCyclePhase.cs" />
     <Compile Include="Map.cs" />
     <Compile Include="MicroClimate\MicroClimateCanopy.cs" />
     <Compile Include="MicroClimate\MicroClimateZone.cs" />
@@ -489,9 +487,8 @@
     <Compile Include="Core\ILocator.cs" />
     <Compile Include="Report\IReportColumn.cs" />
     <Compile Include="Storage\IStorageReader.cs" />
-    <Compile Include="Report\ReportColumnWithValues.cs" />
     <Compile Include="Report\ReportColumnConstantValue.cs" />
-    <Compile Include="Report\ReportColumn.cs" />
+    <Compile Include="Report\AggregatedReportColumn.cs" />
     <Compile Include="Soils\Nutrients\NFlow.cs" />
     <Compile Include="Soils\Nutrients\CarbonFlow.cs" />
     <Compile Include="Soils\Nutrients\NutrientPool.cs" />
@@ -764,6 +761,7 @@
     <Compile Include="CLEM\Validation.cs" />
     <Compile Include="CLEM\CLEMModel.cs" />
     <Compile Include="CLEM\ZoneCLEM.cs" />
+    <Compile Include="Weather\WeatherSampler.cs" />
     <Compile Include="Zones\CircularZone.cs" />
     <Compile Include="Zones\RectangularZone.cs" />
     <Compile Include="G_Range\G_Range.cs" />
