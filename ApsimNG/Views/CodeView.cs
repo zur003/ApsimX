@@ -27,6 +27,11 @@ namespace UserInterface.Views
     public class EditorView : ViewBase, IEditorView
     {
         /// <summary>
+        /// The find-and-replace form
+        /// </summary>
+        private FindAndReplaceForm findForm = new FindAndReplaceForm();
+
+        /// <summary>
         /// Scrolled window
         /// </summary>
         private ScrolledWindow scroller;
@@ -35,6 +40,11 @@ namespace UserInterface.Views
         /// The main text editor
         /// </summary>
         private SourceView textEditor;
+
+        /// <summary>
+        /// Context for search and replace
+        /// </summary>
+        SearchContext searchContext;
 
         /// <summary>
         /// The popup menu options on the editor
@@ -89,10 +99,12 @@ namespace UserInterface.Views
             set
             {
                 textEditor.Buffer.Text = value;
-                //if (Mode == EditorType.ManagerScript)
-                //{
+                if (Mode == EditorType.ManagerScript)
+                {
                 //    textEditor.Completion.AddProvider(new ScriptCompletionProvider(ShowError));
-                //}
+                    textEditor.Buffer.HighlightSyntax = true;
+                    textEditor.Buffer.HighlightMatchingBrackets = true;
+                }
                 //else if (Mode == EditorType.Report)
                 //{
                 //    if (SyntaxModeService.GetSyntaxMode(textEditor.Document, "text/x-apsimreport") == null)
@@ -297,6 +309,8 @@ namespace UserInterface.Views
             styleMenu = AddMenuItem("Use style", null);
             Menu styles = new Menu();
 
+            SearchSettings searchSettings = new SearchSettings();
+            searchContext = new SearchContext(textEditor.Buffer, searchSettings);
             // find all the editor styles and add sub menu items to the popup
             //string[] styleNames = Mono.TextEditor.Highlighting.SyntaxModeService.Styles;
             //Array.Sort(styleNames, StringComparer.InvariantCulture);
@@ -426,10 +440,10 @@ namespace UserInterface.Views
                 double x; // unused, but needed as an out parameter.
                 if (e.Event.Key == Gdk.Key.F3)
                 {
-                    //if (string.IsNullOrEmpty(findForm.LookFor))
-                    //    findForm.ShowFor(textEditor, false);
-                    //else
-                    //    findForm.FindNext(true, (e.Event.State & Gdk.ModifierType.ShiftMask) == 0, string.Format("Search text «{0}» not found.", findForm.LookFor));
+                    if (string.IsNullOrEmpty(findForm.LookFor))
+                        findForm.ShowFor(textEditor, searchContext, false);
+                    else
+                        findForm.FindNext(true, (e.Event.State & Gdk.ModifierType.ShiftMask) == 0, string.Format("Search text «{0}» not found.", findForm.LookFor));
                     e.RetVal = true;
                 }
                 // If the text before the period is not a number and the user pressed either one of the intellisense characters or control-space:
@@ -686,7 +700,7 @@ namespace UserInterface.Views
             }
         }
 
-        #region Code related to Edit menu
+#region Code related to Edit menu
 
         /// <summary>
         /// Show the popup menu
@@ -866,7 +880,7 @@ namespace UserInterface.Views
         {
             try
             {
-                //findForm.ShowFor(textEditor, false);
+                findForm.ShowFor(textEditor, searchContext, false);
             }
             catch (Exception err)
             {
@@ -883,7 +897,7 @@ namespace UserInterface.Views
         {
             try
             {
-                //findForm.ShowFor(textEditor, true);
+                findForm.ShowFor(textEditor, searchContext, true);
             }
             catch (Exception err)
             {
@@ -939,7 +953,7 @@ namespace UserInterface.Views
                 ShowError(err);
             }
         }
-        #endregion
+#endregion
     }
 }
 #endif
