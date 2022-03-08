@@ -74,8 +74,9 @@ namespace UserInterface.Views
 
         public (int Left, int Top, int Width, int Height) GetPixelExtents(string text, bool bold, bool italics)
         {
-            var layout = CreateTextLayout(text, bold, italics);
+            Pango.Layout layout = CreateTextLayout(text, bold, italics);
             layout.GetPixelExtents(out Pango.Rectangle inkRectangle, out Pango.Rectangle logicalRectangle);
+            layout.Dispose();
             return (logicalRectangle.X, logicalRectangle.Y, logicalRectangle.Width, logicalRectangle.Height);
         }
 

@@ -89,6 +89,7 @@ namespace Utility
 
         public void Destroy()
         {
+            window1.Destroy();
             window1.Dispose();
         }
 
