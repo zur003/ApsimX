@@ -523,6 +523,7 @@ namespace UserInterface.Views
 
             label.Layout.SetText(text);
             label.Layout.GetPixelSize(out int width, out _);
+            label.Dispose();
             return width;
         }
 
