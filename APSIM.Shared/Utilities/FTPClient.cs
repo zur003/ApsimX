@@ -9,6 +9,7 @@ namespace APSIM.Shared.Utilities
     /// </summary>
     public class FTPClient
         {
+#pragma warning disable SYSLIB0014
 
         /// <summary>
         /// Uploads the specified file.
@@ -206,6 +207,7 @@ namespace APSIM.Shared.Utilities
             FtpStream.Close();
             Response.Close();
             }
-     
+#pragma warning restore SYSLIB0014
+
     }
 }

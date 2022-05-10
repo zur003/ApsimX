@@ -349,6 +349,7 @@ namespace UserInterface.Presenters
                 // Download the release.
                 try
                 {
+#pragma warning disable SYSLIB0014
                     view.InvokeOnMainThread(delegate { statusLabel.Text = "Downloading the APSIM release..."; });
                     WebClient myWebClient = new WebClient();
                     await myWebClient.DownloadFileTaskAsync(upgrade.DownloadLinkWindows, releaseFileName);
@@ -388,6 +389,7 @@ namespace UserInterface.Presenters
                     }
                     foreach (string fileName in Directory.GetFiles(binFolder, "*,?.*"))
                         File.Delete(fileName);
+#pragma warning restore SYSLIB0014
 
 
                 }

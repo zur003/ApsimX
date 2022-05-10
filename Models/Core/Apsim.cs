@@ -64,6 +64,7 @@
             }
             try
             {
+#pragma warning disable SYSLIB0011
                 IFormatter formatter = new BinaryFormatter();
                 Stream stream = new MemoryStream();
                 using (stream)
@@ -72,6 +73,7 @@
 
                     stream.Seek(0, SeekOrigin.Begin);
                     T newModel = (T)formatter.Deserialize(stream);
+#pragma warning restore SYSLIB0011
 
                     newModel.ParentAllDescendants();
                     return newModel;

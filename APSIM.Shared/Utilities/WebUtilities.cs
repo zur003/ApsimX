@@ -17,6 +17,7 @@
     /// </summary>
     public class WebUtilities
     {
+#pragma warning disable SYSLIB0014
         /// <summary>
         ///  Upload a file via ftp
         /// </summary>
@@ -184,5 +185,6 @@
             }
         }
 
+#pragma warning disable SYSLIB0014
     }
 }

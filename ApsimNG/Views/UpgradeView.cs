@@ -200,8 +200,6 @@
             organisationBox.Text = Utility.Configuration.Settings.Organisation;
             countryBox.Active = Constants.Countries.ToList().IndexOf(Utility.Configuration.Settings.Country);
 
-            WebClient web = new WebClient();
-
             string tempLicenseFileName = Path.Combine(Path.GetTempPath(), "APSIM_NonCommercial_RD_licence.htm");
             if (File.Exists(tempLicenseFileName))
                 File.Delete(tempLicenseFileName);
@@ -336,6 +334,7 @@
 
                         window1.Window.Cursor = new Gdk.Cursor(Gdk.CursorType.Watch);
 
+#pragma warning disable SYSLIB0014
                         WebClient web = new WebClient();
 
                         tempSetupFileName = Path.Combine(Path.GetTempPath(), "APSIMSetup.exe");
@@ -384,6 +383,7 @@
                             if (window1 != null && window1.Window != null)
                                 window1.Window.Cursor = null;
                         }
+#pragma warning restore SYSLIB0014
 
                     }
                 }

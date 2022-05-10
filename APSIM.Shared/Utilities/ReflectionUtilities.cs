@@ -308,6 +308,7 @@
             return null;
         }
 
+#pragma warning disable SYSLIB0011
         /// <summary>
         /// Binary serialise the object and return the resulting stream.
         /// </summary>
@@ -336,6 +337,7 @@
             IFormatter formatter = new BinaryFormatter();
             return formatter.Deserialize(stream);
         }
+#pragma warning restore SYSLIB0011
 
         /// <summary>
         /// Convert an object into a json string. 
