@@ -64,20 +64,9 @@
             }
             try
             {
-#pragma warning disable SYSLIB0011
-                IFormatter formatter = new BinaryFormatter();
-                Stream stream = new MemoryStream();
-                using (stream)
-                {
-                    formatter.Serialize(stream, model);
-
-                    stream.Seek(0, SeekOrigin.Begin);
-                    T newModel = (T)formatter.Deserialize(stream);
-#pragma warning restore SYSLIB0011
-
-                    newModel.ParentAllDescendants();
-                    return newModel;
-                }
+                T newModel = (T)ReflectionUtilities.Clone(model);
+                newModel.ParentAllDescendants();
+                return newModel;
             }
             finally
             {
