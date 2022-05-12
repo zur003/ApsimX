@@ -330,7 +330,11 @@ namespace Models.Utilities
         private string GetRExePath()
         {
             string rScriptPath;
+#if NET6_0_OR_GREATER
             if (OperatingSystem.IsWindows())
+#else
+            if (ProcessUtilities.CurrentOS.IsWindows)
+#endif
             {
                 // On Windows we search the registry for the install path
                 string installDirectory = GetRInstallDirectoryFromRegistry();
@@ -368,7 +372,9 @@ namespace Models.Utilities
         /// <summary>
         /// Gets the directory that the latest version of R is installed to.
         /// </summary>
+#if NET6_0_OR_GREATER
         [System.Runtime.Versioning.SupportedOSPlatform("windows")]
+#endif
         private string GetRInstallDirectoryFromRegistry()
         {
             string registryKey = @"SOFTWARE\R-core";
@@ -419,7 +425,9 @@ namespace Models.Utilities
         /// </summary>
         /// <param name="keyName"></param>
         /// <returns></returns>
+#if NET6_0_OR_GREATER
         [System.Runtime.Versioning.SupportedOSPlatform("windows")]
+#endif
         private List<string> GetSubKeys(string keyName)
         {
             try
