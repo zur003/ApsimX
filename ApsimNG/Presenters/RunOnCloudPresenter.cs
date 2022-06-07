@@ -349,16 +349,14 @@ namespace UserInterface.Presenters
                 // Download the release.
                 try
                 {
-//#pragma warning disable SYSLIB0014
                     view.InvokeOnMainThread(delegate { statusLabel.Text = "Downloading the APSIM release..."; });
                     Stream stream = await WebUtilities.AsyncGetStreamTask(upgrade.DownloadLinkWindows, "*/*");
+                    stream.Position = 0;
                     using (FileStream file = new FileStream(releaseFileName, FileMode.Create, System.IO.FileAccess.Write))
+                    {
                         stream.CopyTo(file);
-
-//                    WebClient myWebClient = new WebClient();
-//                    await myWebClient.DownloadFileTaskAsync(upgrade.DownloadLinkWindows, releaseFileName);
-//#pragma warning restore SYSLIB0014
-
+                        file.Flush();
+                    }
 
                     // Unpack the installer's bin directory.
                     var binDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);

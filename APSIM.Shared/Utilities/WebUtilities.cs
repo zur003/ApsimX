@@ -24,42 +24,6 @@
         /// </summary>
         public static readonly HttpClient client = new HttpClient();
 
-#pragma warning disable SYSLIB0014
-        /// <summary>
-        ///  Upload a file via ftp
-        /// </summary>
-        /// <param name="localFileName">Name of the file to be uploaded</param>
-        /// <param name="username">remote username</param>
-        /// <param name="password">remote password</param>
-        /// <param name="hostname">remote hostname</param>
-        /// <param name="remoteFileName">Full path and name of where the file goes</param>
-        /// <returns></returns>
-        public static bool UploadFTP(string localFileName, string username, string password, string hostname, string remoteFileName)
-        {
-            // Get the object used to communicate with the server.
-            FtpWebRequest request = (FtpWebRequest)WebRequest.Create("ftp://" + hostname + remoteFileName);
-            request.Method = WebRequestMethods.Ftp.UploadFile;
-            request.Credentials = new NetworkCredential();
-
-            // Copy the contents of the file to the request stream.
-            StreamReader sourceStream = new StreamReader(localFileName);
-            byte[] fileContents = Encoding.UTF8.GetBytes(sourceStream.ReadToEnd());
-            sourceStream.Close();
-            request.ContentLength = fileContents.Length;
-
-            Stream requestStream = request.GetRequestStream();
-            requestStream.Write(fileContents, 0, fileContents.Length);
-            requestStream.Close();
-
-            FtpWebResponse response = (FtpWebResponse)request.GetResponse();
-            string retVal = response.StatusDescription;
-            response.Close();
-
-            return retVal != "200";
-        }
-
-#pragma warning restore SYSLIB0014
-
         /// <summary>
         /// Send a string to the specified socket server. Returns the response string. Will throw
         /// if cannot connect.
