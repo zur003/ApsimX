@@ -23,7 +23,7 @@
         /// HttpClient is intended to be instantiated once per application, rather than per-use. See Remarks.
         /// </summary>
         public static readonly HttpClient client = new HttpClient();
- 
+
 #pragma warning disable SYSLIB0014
         /// <summary>
         ///  Upload a file via ftp
@@ -57,6 +57,8 @@
 
             return retVal != "200";
         }
+
+#pragma warning restore SYSLIB0014
 
         /// <summary>
         /// Send a string to the specified socket server. Returns the response string. Will throw
@@ -132,7 +134,7 @@
         /// <param name="url">URL to access</param>
         /// <param name="mediaType">Preferred media type to return</param>
         /// <returns>Data stream obtained from the URL</returns>
-        private static async Task<Stream> AsyncGetStreamTask(string url, string mediaType)
+        public static async Task<Stream> AsyncGetStreamTask(string url, string mediaType)
         {
             client.DefaultRequestHeaders.Accept.Clear();
             client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue(mediaType));
@@ -166,17 +168,22 @@
         {
             try
             {
-                MemoryStream result = AsyncGetStreamTask(url, "*/*").Result as MemoryStream;
+                Stream result = AsyncGetStreamTask(url, "*/*").Result;
                 if (result == null)
                     throw new Exception();
-                return result;
+                if (result is MemoryStream)
+                    return result as MemoryStream;
+                else
+                {
+                    MemoryStream memStream = new MemoryStream();
+                    result.CopyTo(memStream);
+                    return memStream;
+                }
             }
             catch (Exception)
             {
                 throw new Exception("Cannot get data from " + url);
             }
         }
-
-#pragma warning restore SYSLIB0014
     }
 }

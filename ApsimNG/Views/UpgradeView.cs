@@ -333,9 +333,6 @@
 
                         window1.Window.Cursor = new Gdk.Cursor(Gdk.CursorType.Watch);
 
-#pragma warning disable SYSLIB0014
-                        WebClient web = new WebClient();
-
                         tempSetupFileName = Path.Combine(Path.GetTempPath(), "APSIMSetup.exe");
 
                         string sourceURL;
@@ -355,6 +352,9 @@
 
                         if (File.Exists(tempSetupFileName))
                             File.Delete(tempSetupFileName);
+
+#pragma warning disable SYSLIB0014
+                        WebClient web = new WebClient();
 
                         try
                         {
