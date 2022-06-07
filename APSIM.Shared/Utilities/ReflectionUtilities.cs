@@ -308,6 +308,12 @@
             return null;
         }
 
+// Note that Microsoft considers use of BinaryFormatter to be "unsafe". 
+// However, we should be OK if we are reasonably sure that we deserialise only
+// objects that we have ourselves serialised. This pragma allow us to use it without
+// having the compiler generate a warning message.
+// (Also note that ApsimX is inherently unsafe in any case, as its Manager allows execution
+// of virtually anything.)
 #pragma warning disable SYSLIB0011
         /// <summary>
         /// Binary serialise the object and return the resulting stream.
