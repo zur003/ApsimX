@@ -149,5 +149,51 @@
                 throw new Exception("Cannot get data from " + url);
             }
         }
+
+        /// <summary>
+        /// Retrieve data from a URL, providing progress indications along the way
+        /// </summary>
+        /// <param name="url">The URL to obtain (using GET method)</param>
+        /// <param name="destination">A stream to write the results to (typically a FileStream)</param>
+        /// <param name="progress">A Progress object (defaults to null)</param>
+        /// <param name="cancellationToken">a CancellationToken(defaults to an empty token</param>
+        /// <param name="mediaType">Media type to obtain (defaults to */*)</param>
+        /// <returns>A Task</returns>
+        public static async void GetAsyncWithProgress(string url, Stream destination,
+                       IProgress<double> progress = null, CancellationToken cancellationToken = default, string mediaType = "*/*")
+        {
+            try
+            {
+                client.DefaultRequestHeaders.Accept.Clear();
+                client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue(mediaType));
+                HttpResponseMessage response = await client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+                if (!response.IsSuccessStatusCode)
+                {
+                    throw new Exception(string.Format("The request returned with HTTP status code {0}", response.StatusCode));
+                }
+                long contentLength = response.Content.Headers.ContentLength.HasValue ? response.Content.Headers.ContentLength.Value : -1L;
+                using (Stream download = await response.Content.ReadAsStreamAsync())
+                {
+                    long totalRead = 0L;
+                    byte[] buffer = new byte[8192];
+                    int bytesRead;
+
+                    while ((bytesRead = await download.ReadAsync(buffer, 0, buffer.Length, cancellationToken).ConfigureAwait(false)) != 0)
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+                        await destination.WriteAsync(buffer, 0, bytesRead, cancellationToken).ConfigureAwait(false);
+                        totalRead += bytesRead;
+                        progress?.Report((double)totalRead / (double)contentLength);
+                    }
+                }
+            }
+            catch (OperationCanceledException)
+            {}
+            finally
+            {
+                if (destination is FileStream)
+                    destination.Close();
+            }
+        }
     }
 }

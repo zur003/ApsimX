@@ -316,6 +316,7 @@
 
                     Upgrade[] upgradeList = oldVersions.Active ? allUpgrades : upgrades;
                     Upgrade upgrade = upgradeList[selIndex];
+                    versionNumber = upgrade.ReleaseDate.ToString("yyyy.MM.dd.") + upgrade.Issue;
 
                     if ((Gtk.ResponseType)ViewBase.MasterView.ShowMsgDialog($"Are you sure you want to upgrade to version {upgrade.Version}?",
                                             "Are you sure?", MessageType.Question, ButtonsType.YesNo, window1) == Gtk.ResponseType.Yes)
@@ -353,7 +354,23 @@
                         if (File.Exists(tempSetupFileName))
                             File.Delete(tempSetupFileName);
 
+                        try
+                        {
+                            waitDlg = new Gtk.MessageDialog(window1, Gtk.DialogFlags.Modal,
+                                Gtk.MessageType.Info, Gtk.ButtonsType.Cancel, "Downloading file. Please wait...");
+                            waitDlg.Title = "APSIM Upgrade";
+                            var progress = new Progress<double>();
+                            progress.ProgressChanged += Download_ProgressChanged;
+
+                            var cancellationToken = new System.Threading.CancellationTokenSource();
+                            FileStream file = new FileStream(tempSetupFileName, FileMode.Create, System.IO.FileAccess.Write);
+                            WebUtilities.GetAsyncWithProgress(sourceURL, file, progress, cancellationToken.Token, "*/*");
+                            if (waitDlg.Run() == (int)ResponseType.Cancel)
+                                cancellationToken.Cancel();
+
+                        }
 #pragma warning disable SYSLIB0014
+                        /*
                         WebClient web = new WebClient();
 
                         try
@@ -366,7 +383,7 @@
                             web.DownloadFileAsync(new Uri(sourceURL), tempSetupFileName);
                             if (waitDlg.Run() == (int)ResponseType.Cancel)
                                 web.CancelAsync();
-                        }
+                        } */
                         catch (Exception err)
                         {
                             ViewBase.MasterView.ShowMsgDialog("Cannot download this release. Error message is: \r\n" + err.Message, "Error", MessageType.Error, ButtonsType.Ok, window1);
@@ -375,7 +392,7 @@
                         {
                             if (waitDlg != null)
                             {
-                                web.DownloadProgressChanged -= OnDownloadProgressChanged;
+                                // web.DownloadProgressChanged -= OnDownloadProgressChanged;
                                 waitDlg.Dispose();
                                 waitDlg = null;
                             }
@@ -391,6 +408,43 @@
             {
                 ShowError(err);
             }
+        }
+
+        /// <summary>
+        /// Invoked when the download progress changes.
+        /// Updates the progress bar.
+        /// </summary>
+        /// <param name="sender">Sender object.</param>
+        /// <param name="e">Fraction (0-1) of download which has completed</param>
+        private void Download_ProgressChanged(object sender, double e)
+        {
+            try
+            {
+                Gtk.Application.Invoke(delegate
+                {
+                    try
+                    {
+                        double progress = 100.0 * e;
+                        waitDlg.Text = string.Format("Downloading file: {0:0.}%. Please wait...", progress);
+                    }
+                    catch (Exception err)
+                    {
+                        ShowError(err);
+                    }
+                });
+            }
+            catch (Exception err)
+            {
+                err = new Exception("Error updating download progress", err);
+                ShowError(err);
+            }
+            if (e == 1.0) // Should be true only if the file has been completely downloaded
+            {
+                // args is a holdover from the earlier WebClient approach and no longer does anything useful
+                var args = new System.ComponentModel.AsyncCompletedEventArgs(null, false, null);
+                Web_DownloadFileCompleted(this, args);
+            }
+
         }
 
         /// <summary>
