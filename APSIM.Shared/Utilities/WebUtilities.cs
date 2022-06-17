@@ -88,7 +88,7 @@
             {
                 PropertyNameCaseInsensitive = true
             };
-            return JsonSerializer.Deserialize<T>(stream, options);
+            return JsonSerializer.DeserializeAsync<T>(stream, options).Result;
         }
 
 
