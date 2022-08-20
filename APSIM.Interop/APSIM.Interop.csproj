@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFrameworks>net6.0</TargetFrameworks>
@@ -11,15 +11,15 @@
     <ProjectReference Include="../Models/Models.csproj" />
     <PackageReference Include="OxyPlot.Core" Version="2.1.0" />
     <PackageReference Include="OxyPlot.SkiaSharp" Version="2.1.0" />
-    <PackageReference Include="System.Drawing.Common" Version="5.0.0" />
-    <PackageReference Include="Markdig" Version="0.22.1" />
-    <PackageReference Include="MathNet.Numerics" Version="4.11.0" />
-    <PackageReference Include="Svg" Version="3.2.3" />
+    <PackageReference Include="Markdig" Version="0.30.3" />
+    <PackageReference Include="MathNet.Numerics" Version="5.0.0" />
+    <PackageReference Include="Svg" Version="3.4.3" />
     <PackageReference Include="SharpMap" Version="1.2.0" />
     <PackageReference Include="SharpMap.Layers.BruTile" Version="1.2.0" />
     <PackageReference Include="ProjNET4GeoAPI" Version="1.4.1" />
     <EmbeddedResource Include="Resources\**" />
-    <PackageReference Include="SkiaSharp" Version="2.88.0-preview.145" />
+    <PackageReference Include="SkiaSharp" Version="2.88.1" />
+    <PackageReference Include="System.Drawing.Common" Version="5.0.0" />
   </ItemGroup>
 
   <!-- .NET Core-specific references -->
