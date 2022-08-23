@@ -44,11 +44,11 @@
     <PackageReference Include="Microsoft.Azure.Batch" Version="13.0.0" />
     <PackageReference Include="Microsoft.Azure.Storage.Blob" Version="11.1.3" />
     <PackageReference Include="Microsoft.Azure.Storage.Common" Version="11.1.3" />
-	<PackageReference Include="Microsoft.CodeAnalysis" Version="3.7.0-1.final" />
-    <PackageReference Include="Microsoft.CodeAnalysis.Common" Version="3.7.0-1.final" />
-	<PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="3.7.0-1.final" />
-	<PackageReference Include="Microsoft.CodeAnalysis.CSharp.Features" Version="3.7.0-1.final" />
-	<PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="3.7.0-1.final" />
+	<PackageReference Include="Microsoft.CodeAnalysis" Version="4.4.0-1.final" />
+    <PackageReference Include="Microsoft.CodeAnalysis.Common" Version="4.4.0-1.final" />
+	<PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.4.0-1.final" />
+	<PackageReference Include="Microsoft.CodeAnalysis.CSharp.Features" Version="4.4.0-1.final" />
+	<PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.4.0-1.final" />
 	<PackageReference Include="SharpMap" Version="1.2.0" />
 	<PackageReference Include="SharpMap.Layers.BruTile" Version="1.2.0" />
     <PackageReference Include="System.Configuration.ConfigurationManager" Version="5.0.0" />
