@@ -50,9 +50,8 @@
 	<PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.4.0-1.final" />
 	<PackageReference Include="SharpMap" Version="1.2.0" />
 	<PackageReference Include="SharpMap.Layers.BruTile" Version="1.2.0" />
-    <PackageReference Include="System.Configuration.ConfigurationManager" Version="5.0.0" />
     <PackageReference Include="ISO3166" Version="1.0.4" />
-    <PackageReference Include="System.Resources.Extensions" Version="5.0.0" />
+    <PackageReference Include="System.Resources.Extensions" Version="6.0.0" />
     <PackageReference Include="System.Text.Encoding.CodePages" Version="6.0.0" />
     <PackageReference Include="ProjNET4GeoAPI" Version="1.4.1" />
     <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.0.0" />
@@ -62,6 +61,7 @@
     <PackageReference Include="OxyPlot.GtkSharp3" Version="2.1.0-Preview1" />
     <PackageReference Include="HtmlAgilityPack" Version="1.11.43" />
 	<PackageReference Include="System.Drawing.Common" Version="5.0.0" />
+	<PackageReference Include="System.Windows.Extensions" Version="5.0.0" />
   </ItemGroup>
 
   <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
