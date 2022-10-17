@@ -24,6 +24,7 @@ namespace APSIM.Documentation
         private const string agpScience = "https://apsimdev.apsim.info/ApsimX/Documents/AgPastureScience.pdf";
         private const string microClimateScience = "https://www.apsim.info/wp-content/uploads/2019/09/Micromet.pdf";
         private const string grazPlan = "https://grazplan.csiro.au/wp-content/uploads/2007/08/TechPaperMay12.pdf";
+        private const string swim = "https://apsimdev.apsim.info/ApsimX/Documents/SWIMv21UserManual.pdf";
 
         private static PdfOptions options = PdfOptions.Default;
 
@@ -124,7 +125,7 @@ namespace APSIM.Documentation
                 StandardPmfPlantRow("FodderBeet"),
                 StandardPmfPlantRow("Gliricidia"),
                 StandardPmfPlantRow("Maize"),
-                MicroClimateRow(),
+                ModelWithNoResourceRow("MicroClimate", extraCells: new[] { new DocumentationCell(new ExternalDocument("Science Documentation", microClimateScience)) }),
                 StandardPmfPlantRow("Mungbean", new ExternalDocument("Video", "https://www.youtube.com/watch?v=nyDZkT1JTXw")),
                 StandardPmfPlantRow("Nutrient"),
                 StandardPmfPlantRow("Oats"),
@@ -142,16 +143,11 @@ namespace APSIM.Documentation
                 StandardPmfPlantRow("Soybean"),
                 SugarcaneRow(),
                 StockRow(),
+                ModelWithNoResourceRow("SWIM", extraCells: new[] { new DocumentationCell(new ExternalDocument("SWIM Technical Documentation (1996)", swim)) }),
                 StandardPmfPlantRow("Wheat"),
                 StandardPmfPlantRow("WhiteClover"),
             };
             return new DocumentationTable($"Model Documentation for version {Simulations.ApsimVersion}", cols, rows);
-        }
-
-        private static IDocumentationRow MicroClimateRow()
-        {
-            IDocumentationCell scienceCell = new DocumentationCell(new ExternalDocument("Science Documentation", microClimateScience));
-            return ModelWithNoResourceRow("MicroClimate", new[] { scienceCell });
         }
 
         private static IDocumentationRow AgPastureDocsRow(string name, string resourceFile, string validationFile, string outFile, bool documentSpeciesTable)
@@ -236,15 +232,25 @@ namespace APSIM.Documentation
             return CustomDocsRow("SoilWater", "Description & validation", inputs, $"{modelName}.pdf", paramsCell.ToEnumerable());
         }
 
-        private static IDocumentationRow ModelWithNoResourceRow(string modelName, IEnumerable<IDocumentationCell> extraCells = null)
+        private static IDocumentationRow ModelWithNoResourceRow(string modelName, bool isUnderReview = false, IEnumerable<IDocumentationCell> extraCells = null)
         {
-            string validationFile = Path.Combine(validation, modelName, $"{modelName}.apsimx");
+            Console.WriteLine($"Creating documentation for {modelName}");
+            string validationFile;
+            string displayName = modelName;
+            if (isUnderReview)
+            {
+                displayName += " (under review)";
+                validationFile = Path.Combine(underReview, modelName, $"{modelName}.apsimx");
+            }
+            else
+                validationFile = Path.Combine(validation, modelName, $"{modelName}.apsimx");
             IEnumerable<string> inputs = new string[1] { validationFile };
             
-            IDocumentationFile paramsDocs = new ParamsDocsFromFile(validationFile, $"{modelName}-params.pdf", options);
+            IDocumentationFile paramsDocs = new ParamsDocsFromFile(validationFile, $"{modelName}-params.pdf", options, path:modelName);
             IDocumentationCell paramsCell = new DocumentationCell(paramsDocs);
             extraCells = extraCells == null ? paramsCell.ToEnumerable() : extraCells.Prepend(paramsCell);
-            return CustomDocsRow(modelName, "Description & validation", inputs, $"{modelName}.pdf", extraCells);
+           
+            return CustomDocsRow(displayName, "Description & validation", inputs, $"{modelName}.pdf", extraCells);
         }
 
         private static IDocumentationRow CreateUnderReviewPlantRow(string modelName)
