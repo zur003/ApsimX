@@ -11,9 +11,9 @@
     <ProjectReference Include="../Models/Models.csproj" />
     <PackageReference Include="OxyPlot.Core" Version="2.1.0" />
     <PackageReference Include="OxyPlot.SkiaSharp" Version="2.1.0" />
-    <PackageReference Include="Markdig" Version="0.30.3" />
+    <PackageReference Include="Markdig" Version="0.30.4" />
     <PackageReference Include="MathNet.Numerics" Version="5.0.0" />
-    <PackageReference Include="Svg" Version="3.4.3" />
+    <PackageReference Include="Svg" Version="3.4.4" />
     <PackageReference Include="SharpMap" Version="1.2.0" />
     <PackageReference Include="SharpMap.Layers.BruTile" Version="1.2.0" />
     <PackageReference Include="ProjNET4GeoAPI" Version="1.4.1" />
