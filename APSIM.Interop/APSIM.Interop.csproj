@@ -1,7 +1,7 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net6.0</TargetFrameworks>
+    <TargetFrameworks>netcoreapp3.1</TargetFrameworks>
     <BaseOutputPath>../bin</BaseOutputPath>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
@@ -9,16 +9,13 @@
   <ItemGroup>
     <ProjectReference Include="../APSIM.Shared/APSIM.Shared.csproj" />
     <ProjectReference Include="../Models/Models.csproj" />
-    <PackageReference Include="OxyPlot.Core" Version="2.1.0" />
-    <PackageReference Include="OxyPlot.SkiaSharp" Version="2.1.0" />
-    <PackageReference Include="Markdig" Version="0.30.4" />
-    <PackageReference Include="MathNet.Numerics" Version="5.0.0" />
-    <PackageReference Include="Svg" Version="3.4.4" />
-    <PackageReference Include="SharpMap" Version="1.2.0" />
-    <PackageReference Include="SharpMap.Layers.BruTile" Version="1.2.0" />
+    <PackageReference Include="CairoSharp" Version="3.24.24.38" />
+    <PackageReference Include="Mapsui" Version="3.0.2" />
+    <PackageReference Include="Markdig" Version="0.22.1" />
+    <PackageReference Include="MathNet.Numerics" Version="4.11.0" />
     <PackageReference Include="ProjNET4GeoAPI" Version="1.4.1" />
     <EmbeddedResource Include="Resources\**" />
-    <PackageReference Include="SkiaSharp" Version="2.88.1" />
+    <PackageReference Include="SkiaSharp" Version="2.88.3" />
     <None Remove="Resources\Images\Swim-layers.png" />
   </ItemGroup>
 
@@ -28,7 +25,7 @@
     <PackageReference Include="PdfSharpCore" Version="1.2.11" />
     <PackageReference Include="OxyPlot.Core" Version="2.1.0-Preview1" />
     <PackageReference Include="OxyPlot.SkiaSharp" Version="2.1.0-Preview1" />
-    <PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="2.88.0-preview.127" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="2.88.3" />
     <PackageReference Include="HarfBuzzSharp.NativeAssets.Linux" Version="2.8.2-preview.127" />
   </ItemGroup>
 </Project>
