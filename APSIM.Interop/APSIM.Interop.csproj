@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>netcoreapp3.1</TargetFrameworks>
+    <TargetFrameworks>net6.0</TargetFrameworks>
     <BaseOutputPath>../bin</BaseOutputPath>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
@@ -11,8 +11,11 @@
     <ProjectReference Include="../Models/Models.csproj" />
     <PackageReference Include="CairoSharp" Version="3.24.24.38" />
     <PackageReference Include="Mapsui" Version="3.0.2" />
-    <PackageReference Include="Markdig" Version="0.22.1" />
-    <PackageReference Include="MathNet.Numerics" Version="4.11.0" />
+    <PackageReference Include="Markdig" Version="0.30.4" />
+    <PackageReference Include="MathNet.Numerics" Version="5.0.0" />
+    <PackageReference Include="OxyPlot.Core" Version="2.1.2" />
+    <PackageReference Include="OxyPlot.GtkSharp3" Version="2.1.0-Preview1" />
+    <PackageReference Include="OxyPlot.SkiaSharp" Version="2.1.2" />
     <PackageReference Include="ProjNET4GeoAPI" Version="1.4.1" />
     <EmbeddedResource Include="Resources\**" />
     <PackageReference Include="SkiaSharp" Version="2.88.3" />
