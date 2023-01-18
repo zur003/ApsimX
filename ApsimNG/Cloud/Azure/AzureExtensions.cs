@@ -1,4 +1,5 @@
-﻿using Microsoft.Azure.Storage.Blob;
+﻿using Azure.Storage.Blobs;
+using Azure.Storage.Blobs.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -15,21 +16,13 @@ namespace ApsimNG.Cloud.Azure
         /// </summary>
         /// <param name="container">Container whose blobs should be enumerated.</param>
         /// <param name="ct">Cancellation token.</param>
-        public static async Task<List<CloudBlockBlob>> ListBlobsAsync(this CloudBlobContainer container, CancellationToken ct)
+        public static async Task<List<BlobClient>> ListBlobsAsync(this BlobContainerClient container, CancellationToken ct)
         {
-            BlobContinuationToken continuationToken = null;
-            List<CloudBlockBlob> results = new List<CloudBlockBlob>();
-            do
+            List<BlobClient> results = new List<BlobClient>();
+            await foreach (BlobItem blob in container.GetBlobsAsync(BlobTraits.None, BlobStates.None, string.Empty))
             {
-                var response = await container.ListBlobsSegmentedAsync(continuationToken, ct);
-                continuationToken = response.ContinuationToken;
-                results.AddRange(response.Results.Cast<CloudBlockBlob>());
-
-                if (ct.IsCancellationRequested)
-                    return null;
+               results.Add(container.GetBlobClient(blob.Name));
             }
-            while (continuationToken != null);
-
             return results;
         }
     }

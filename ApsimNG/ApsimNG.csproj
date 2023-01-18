@@ -37,13 +37,12 @@
     <ProjectReference Include="..\APSIM.Interop\APSIM.Interop.csproj" />
     <ProjectReference Include="..\Models\Models.csproj" />
     <ProjectReference Include="..\APSIM.Server\APSIM.Server.csproj" />
+    <PackageReference Include="Azure.Storage.Blobs" Version="12.14.1" />
 	
     <!-- Shared package references -->
     <PackageReference Include="ClosedXML" Version="0.100.3" />
     <PackageReference Include="Mapsui" Version="3.0.2" />
     <PackageReference Include="Microsoft.Azure.Batch" Version="15.4.0" />
-    <PackageReference Include="Microsoft.Azure.Storage.Blob" Version="11.2.3" />
-    <PackageReference Include="Microsoft.Azure.Storage.Common" Version="11.2.3" />
     <PackageReference Include="Microsoft.CodeAnalysis" Version="4.5.0-2.final" />
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.5.0-2.final" />
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Features" Version="4.5.0-2.final" />

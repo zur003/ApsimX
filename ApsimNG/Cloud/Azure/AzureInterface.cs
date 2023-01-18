@@ -3,8 +3,8 @@ using ApsimNG.Cloud.Azure;
 using Microsoft.Azure.Batch;
 using Microsoft.Azure.Batch.Auth;
 using Microsoft.Azure.Batch.Common;
-using Microsoft.Azure.Storage;
-using Microsoft.Azure.Storage.Blob;
+using Azure;
+using Azure.Storage.Blobs;
 using Models;
 using Models.Core;
 using Models.Core.Run;
@@ -26,7 +26,7 @@ namespace ApsimNG.Cloud
     public class AzureInterface : ICloudInterface
     {
         private BatchClient batchClient;
-        private CloudBlobClient storageClient;
+        private BlobServiceClient storageClient;
 
         /// <summary>The results are compressed into a file with this name.</summary>
         private const string resultsFileName = "Results.zip";
@@ -47,9 +47,9 @@ namespace ApsimNG.Cloud
             Licence licence = new Licence(AzureSettings.Default.LicenceFilePath);
 
             // Setup Azure batch/storage clients using the given credentials.
-            var credentials = new Microsoft.Azure.Storage.Auth.StorageCredentials(licence.StorageAccount, licence.StorageKey);
+            var credentials = new Azure.Storage.Auth.StorageCredentials(licence.StorageAccount, licence.StorageKey);
             var storageAccount = new CloudStorageAccount(credentials, true);
-            storageClient = storageAccount.CreateCloudBlobClient();
+            storageClient = storageAccount.CreateBlobServiceClient();
 
             var sharedCredentials = new BatchSharedKeyCredentials(licence.BatchUrl, licence.BatchAccount, licence.BatchKey);
             batchClient = BatchClient.Open(sharedCredentials);
@@ -281,15 +281,15 @@ namespace ApsimNG.Cloud
             Guid parsedID = Guid.Parse(jobID);
 
             // Delete cloud storage associated with the job.
-            await storageClient.GetContainerReference(StorageConstants.GetJobOutputContainer(parsedID)).DeleteIfExistsAsync(ct);
+            await storageClient.GetBlobContainerClient(StorageConstants.GetJobOutputContainer(parsedID)).DeleteIfExistsAsync(ct);
             if (ct.IsCancellationRequested)
                 return;
 
-            await storageClient.GetContainerReference(StorageConstants.GetJobContainer(parsedID)).DeleteIfExistsAsync(ct);
+            await storageClient.GetBlobContainerClient(StorageConstants.GetJobContainer(parsedID)).DeleteIfExistsAsync(ct);
             if (ct.IsCancellationRequested)
                 return;
 
-            await storageClient.GetContainerReference(jobID).DeleteIfExistsAsync(ct);
+            await storageClient.GetBlobContainerClient(jobID).DeleteIfExistsAsync(ct);
             if (ct.IsCancellationRequested)
                 return;
 
@@ -351,17 +351,17 @@ namespace ApsimNG.Cloud
         /// <param name="resultTempDirectory"></param>
         /// <param name="ct"></param>
         /// <returns></returns>
-        private static async Task DownloadAndProcessFiles(List<CloudBlockBlob> outputs, Action<double> ShowProgress, string resultTempDirectory, CancellationToken ct)
+        private static async Task DownloadAndProcessFiles(List<BlobClient> outputs, Action<double> ShowProgress, string resultTempDirectory, CancellationToken ct)
         {
             // Download all run outputs.
             for (int i = 0; i < outputs.Count; i++)
             {
                 ShowProgress(i / outputs.Count);
-                CloudBlockBlob blob = outputs[i];
+                BlobClient blob = outputs[i];
 
                 // todo: Download in parallel?
                 var fullFileName = Path.Combine(resultTempDirectory, blob.Name);
-                await blob.DownloadToFileAsync(fullFileName, FileMode.Create, ct);
+                await blob.DownloadToAsync(fullFileName, FileMode.Create, ct);
 
                 if (ct.IsCancellationRequested)
                     return;
@@ -408,9 +408,9 @@ namespace ApsimNG.Cloud
         /// </summary>
         /// <param name="jobID">Job ID.</param>
         /// <param name="ct">Cancellation token.</param>
-        private async Task<List<CloudBlockBlob>> GetJobOutputs(Guid jobID, CancellationToken ct)
+        private async Task<List<BlobClient>> GetJobOutputs(Guid jobID, CancellationToken ct)
         {
-            CloudBlobContainer containerRef = storageClient.GetContainerReference(StorageConstants.GetJobOutputContainer(jobID));
+            BlobContainerClient containerRef = storageClient.GetBlobContainerClient(StorageConstants.GetJobOutputContainer(jobID));
             if (!await containerRef.ExistsAsync(ct) || ct.IsCancellationRequested)
                 return null;
 
@@ -426,7 +426,7 @@ namespace ApsimNG.Cloud
         /// <param name="ct">Cancellation token.</param>
         private async Task SetAzureMetaDataAsync(string containerName, string key, string val, CancellationToken ct)
         {
-            var containerRef = storageClient.GetContainerReference(containerName);
+            var containerRef = storageClient.GetBlobContainerClient(containerName);
             await containerRef.CreateIfNotExistsAsync(ct);
             if (ct.IsCancellationRequested)
                 return;
@@ -441,7 +441,7 @@ namespace ApsimNG.Cloud
         /// <param name="ct">Cancellation token.</param>
         private async Task<string> GetContainerMetaDataAsync(string containerName, string key, CancellationToken ct)
         {
-            CloudBlobContainer containerRef = storageClient.GetContainerReference(containerName);
+            BlobContainerClient containerRef = storageClient.GetBlobContainerClient(containerName);
             if (!await containerRef.ExistsAsync(ct))
                 throw new Exception($"Failed to fetch metadata '{key}' for container '{containerName}' - container does not exist");
 
@@ -467,9 +467,9 @@ namespace ApsimNG.Cloud
         /// <param name="ct">Allows for cancellation of the task.</param>
         private async Task<string> UploadFileIfNeededAsync(string containerName, string filePath, CancellationToken ct)
         {
-            CloudBlobContainer container = storageClient.GetContainerReference(containerName);
+            BlobContainerClient container = storageClient.GetBlobContainerClient(containerName);
             await container.CreateIfNotExistsAsync(ct);
-            CloudBlockBlob blob = container.GetBlockBlobReference(Path.GetFileName(filePath));
+            BlobClient blob = container.GetBlockBlobReference(Path.GetFileName(filePath));
 
             string md5 = GetFileMd5(filePath);
             
@@ -500,14 +500,14 @@ namespace ApsimNG.Cloud
         {
             try
             {
-                if (!await storageClient.GetContainerReference($"job-{cloudJob.Id}").ExistsAsync(ct))
+                if (!await storageClient.GetBlobContainerClient($"job-{cloudJob.Id}").ExistsAsync(ct))
                 {
                     await DeleteJobAsync(cloudJob.Id, ct);
                     return null;
                 }
                 string owner = await GetContainerMetaDataAsync($"job-{cloudJob.Id}", "Owner", ct);
 
-                TaskCounts tasks = (await batchClient.JobOperations.GetJobTaskCountsAsync(cloudJob.Id, cancellationToken: ct)).TaskCounts;
+                TaskCounts tasks = await batchClient.JobOperations.GetJobTaskCountsAsync(cloudJob.Id, cancellationToken: ct);
                 int numTasks = tasks.Active + tasks.Running + tasks.Completed;
 
                 // If there are no tasks, set progress to 100%.
@@ -615,8 +615,8 @@ namespace ApsimNG.Cloud
         /// </summary>
         private IEnumerable<ResourceFile> GetJobManagerResourceFiles()
         {
-            var toolsRef = storageClient.GetContainerReference("jobmanager");
-            foreach (CloudBlockBlob listBlobItem in toolsRef.ListBlobs())
+            var toolsRef = storageClient.GetBlobContainerClient("jobmanager");
+            foreach (BlobClient listBlobItem in toolsRef.ListBlobs())
             {
                 var sas = listBlobItem.GetSharedAccessSignature(new SharedAccessBlobPolicy
                 {
@@ -638,8 +638,8 @@ namespace ApsimNG.Cloud
         {
             yield return ResourceFile.FromUrl(modelZipFileSas, BatchConstants.ModelZipFileName);
 
-            var toolsRef = storageClient.GetContainerReference("tools");
-            foreach (CloudBlockBlob listBlobItem in toolsRef.ListBlobs())
+            var toolsRef = storageClient.GetBlobContainerClient("tools");
+            foreach (BlobClient listBlobItem in toolsRef.ListBlobs())
             {
                 var sas = listBlobItem.GetSharedAccessSignature(new SharedAccessBlobPolicy
                 {
@@ -650,8 +650,8 @@ namespace ApsimNG.Cloud
                 yield return ResourceFile.FromUrl(listBlobItem.Uri.AbsoluteUri + sas, listBlobItem.Name);
             }
 
-            var apsimRef = storageClient.GetContainerReference("apsim");
-            foreach (CloudBlockBlob listBlobItem in apsimRef.ListBlobs())
+            var apsimRef = storageClient.GetBlobContainerClient("apsim");
+            foreach (BlobClient listBlobItem in apsimRef.ListBlobs())
             {
                 if (listBlobItem.Name.ToLower().Contains(version.ToLower()))
                 {
