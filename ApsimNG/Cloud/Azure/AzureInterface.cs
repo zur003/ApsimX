@@ -507,7 +507,7 @@ namespace ApsimNG.Cloud
                 }
                 string owner = await GetContainerMetaDataAsync($"job-{cloudJob.Id}", "Owner", ct);
 
-                TaskCounts tasks = await batchClient.JobOperations.GetJobTaskCountsAsync(cloudJob.Id, cancellationToken: ct);
+                TaskCounts tasks = (await batchClient.JobOperations.GetJobTaskCountsAsync(cloudJob.Id, cancellationToken: ct)).TaskCounts;
                 int numTasks = tasks.Active + tasks.Running + tasks.Completed;
 
                 // If there are no tasks, set progress to 100%.

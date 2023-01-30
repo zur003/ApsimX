@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -6,7 +6,8 @@
     <BaseOutputPath>../bin</BaseOutputPath>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <AssemblyName>apsim</AssemblyName>
-  </PropertyGroup>
+    <SelfContained>false</SelfContained>
+</PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="../APSIM.Shared/APSIM.Shared.csproj" />
