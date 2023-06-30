@@ -41,12 +41,15 @@ namespace Models.Storage
         /// <param name="table">The table definition to write to the database.</param>
         public void EnsureTableExistsAndHasRequiredColumns(DataTable table)
         {
+            connection.BeginTransaction();
             // Check to make sure the table exists and has our columns.
             if (TableExistsInDb)
                 AlterTable(table);
             else
                 CreateTable(table);
+            connection.EndTransaction();
         }
+
 
         /// <summary>Create a table that matches the specified table.</summary>
         /// <param name="table">The table definition to write to the database.</param>
@@ -74,17 +77,17 @@ namespace Models.Storage
         /// <param name="table">The table definition to write to the database.</param>
         private void AlterTable(DataTable table)
         {
-            bool haveBegunTransaction = false;
+            //bool haveBegunTransaction = false;
 
             foreach (DataColumn column in table.Columns)
             {
                 if (!columnNamesInDb.Contains(column.ColumnName))
                 {
-                    if (!haveBegunTransaction)
-                    {
-                        haveBegunTransaction = true;
-                        connection.BeginTransaction();
-                    }
+                    //if (!haveBegunTransaction)
+                    //{
+                    //    haveBegunTransaction = true;
+                    //    connection.BeginTransaction();
+                    //}
 
                     // Column is missing from database file - write it.
                     bool allowLongStrings = table.TableName.StartsWith("_");
@@ -94,8 +97,8 @@ namespace Models.Storage
             }
 
             // End the transaction that we started above.
-            if (haveBegunTransaction)
-                connection.EndTransaction();
+            // if (haveBegunTransaction)
+            //    connection.EndTransaction();
         }
     }
 }

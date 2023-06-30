@@ -202,7 +202,7 @@ namespace Models.Storage
             else
             {
                 int currentCheckpointID = checkpointIDs["Current"].ID;
-                sql = $"DELETE FROM \"{tableName}\" WHERE CheckpointID = {currentCheckpointID}";
+                sql = $"DELETE FROM \"{tableName}\" WHERE \"CheckpointID\" = {currentCheckpointID}";
             }
             Connection.ExecuteNonQuery(sql);
             lock (lockObject)

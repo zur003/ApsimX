@@ -37,6 +37,7 @@
 
     <!-- Scripts and other files used for 'run on azure' feature -->
     <AzureFiles Include="../DeploymentSupport/global/**/*" />
+    <Compile Remove="Views\DropDownView - Copy.cs" />
 	
     <!-- Shared project references -->
     <ProjectReference Include="..\APSIM.Shared\APSIM.Shared.csproj" />
