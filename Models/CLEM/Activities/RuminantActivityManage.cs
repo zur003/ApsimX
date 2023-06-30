@@ -5,14 +5,12 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
-using System.Text;
 using Models.Core.Attributes;
 using Newtonsoft.Json;
 using System.Globalization;
 using System.IO;
 using Models.CLEM.Interfaces;
 using APSIM.Shared.Utilities;
-using Models.PMF.Organs;
 
 namespace Models.CLEM.Activities
 {
@@ -1882,7 +1880,7 @@ namespace Models.CLEM.Activities
                         {
                             htmlWriter.Write("<span class=\"resourcelink\">" + GrazeFoodStoreNameBreeders + "</span>");
                             if (MinimumPastureBeforeRestock > 0)
-                                htmlWriter.Write(" with no restocking while pasture is below <span class=\"setvalue\">" + MinimumPastureBeforeRestock.ToString() + "</span> kg/ha");
+                                htmlWriter.Write($" with no restocking while pasture is below <span class=\"setvalue\">{MinimumPastureBeforeRestock}</span> kg/ha");
                         }
                         htmlWriter.Write("</div>");
 
@@ -1945,7 +1943,7 @@ namespace Models.CLEM.Activities
                         {
                             htmlWriter.Write("<span class=\"resourcelink\">" + GrazeFoodStoreNameSires + "</span>");
                             if (MinimumPastureBeforeRestock > 0)
-                                htmlWriter.Write(" with no restocking while pasture is below <span class=\"setvalue\">" + MinimumPastureBeforeRestock.ToString() + "</span> kg/ha");
+                                htmlWriter.Write($" with no restocking while pasture is below <span class=\"setvalue\">{MinimumPastureBeforeRestock}</span> kg/ha");
                         }
                     }
                     else
