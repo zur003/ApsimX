@@ -42,6 +42,12 @@ namespace UserInterface.Views
         /// <summary>The names of the columns to read from table.</summary>
         private IEnumerable<string> columnNameFilters;
 
+        /// <summary>
+        /// If the store is a DataStoreReader, points to its Connection.
+        /// This allows us to use SQL appropriate for different connection types.
+        /// </summary>
+        private IDatabaseConnection connection = null;
+
         /// <summary>Constructor.</summary>
         /// <param name="store">The data store.</param>
         /// <param name="dataTableName">Name of table to read.</param>
@@ -59,6 +65,8 @@ namespace UserInterface.Views
                                  int dataPageSize = 50)
         {
             dataStore = store;
+            if (dataStore is DataStoreReader)
+                connection = (dataStore as DataStoreReader).Connection;
             checkpointName = checkpointNameInScope;
             tableName = dataTableName;
             simulationNames = simulationNamesInScope;
@@ -74,7 +82,8 @@ namespace UserInterface.Views
         /// <summary>Cleanup the instance.</summary>
         public void Cleanup()
         {
-            dataStore.ExecuteSql("DROP TABLE IF EXISTS keyset");
+            if (dataStore is SQLite)
+                dataStore.ExecuteSql("DROP TABLE IF EXISTS keyset");
         }
 
         /// <summary>Invoked when the paging is about to start.</summary>
@@ -136,12 +145,23 @@ namespace UserInterface.Views
         private DataPage GetData(int startRowIndex)
         {
             PagingStart?.Invoke(this, new EventArgs());
-            var newData = dataStore.GetData(tableName,
-                                            checkpointName,
-                                            simulationNames,
-                                            columnNames,
-                                            GetRollingCursorRowFilter(startRowIndex, pageSize));
-
+            DataTable newData = null;
+            if (connection is SQLite)
+                newData = dataStore.GetData(tableName,
+                                             checkpointName,
+                                             simulationNames,
+                                             columnNames,
+                                             GetRollingCursorRowFilter(startRowIndex, pageSize));
+            else
+                newData = dataStore.GetData(tableName,
+                                             checkpointName,
+                                             simulationNames,
+                                             columnNames,
+                                             null,
+                                             startRowIndex,
+                                             pageSize);
+            
+ 
             // Remove unwanted columns from data table.
             foreach (string columnName in DataTableUtilities.GetColumnNames(newData))
                 if (!columnNames.Contains(columnName))
@@ -159,14 +179,18 @@ namespace UserInterface.Views
         /// <remarks>This concept of a rolling cursor comes from: https://sqlite.org/forum/forumpost/2cfa137263</remarks>
         private void CreateTemporaryKeyset()
         {
-            Cleanup();
             string filter = GetFilter();
-            string sql = "CREATE TEMPORARY TABLE keyset AS " +
+            string sql;
+            if (connection is SQLite)
+            {
+                Cleanup();
+                sql = "CREATE TEMPORARY TABLE keyset AS " +
                          $"SELECT rowid FROM \"{tableName}\" ";
-            if (!string.IsNullOrEmpty(filter))
-                sql += $"WHERE {filter}";
+                if (!string.IsNullOrEmpty(filter))
+                    sql += $"WHERE {filter}";
 
-            dataStore.GetDataUsingSql(sql);
+                dataStore.GetDataUsingSql(sql);
+            }
         }
 
         /// <summary>Gets a filter that includes rowid to implement data pagination (rolling cursor).</summary>
@@ -177,7 +201,7 @@ namespace UserInterface.Views
         {
             string filter = GetFilter();
 
-            var data = dataStore.GetDataUsingSql($"SELECT rowid FROM keyset WHERE rowid >= {from+1} ORDER BY rowid LIMIT {count}");
+            var data = dataStore.GetDataUsingSql($"SELECT rowid FROM keyset WHERE rowid >= {from + 1} ORDER BY rowid LIMIT {count}");
 
             if (data is null)
                 return "";
@@ -185,7 +209,9 @@ namespace UserInterface.Views
             var rowIds = DataTableUtilities.GetColumnAsIntegers(data, "rowid");
             var rowIdsCSV = StringUtilities.Build(rowIds, ",");
 
-            var returnFilter = $"RowID in ({rowIdsCSV})";
+            string returnFilter = String.Empty;
+            if (connection is SQLite)
+                returnFilter = $"RowID in ({rowIdsCSV})";
             if (!string.IsNullOrEmpty(filter))
                 returnFilter += $" AND ({filter})";
             return returnFilter;
@@ -227,7 +253,7 @@ namespace UserInterface.Views
         private string GetFilter()
         {
             var filter = rowFilter;
-            string checkpointFilter = $"CheckpointID = {dataStore.GetCheckpointID(checkpointName)}";
+            string checkpointFilter = $"\"CheckpointID\" = {dataStore.GetCheckpointID(checkpointName)}";
             if (string.IsNullOrEmpty(filter))
                 filter = checkpointFilter;
             else
@@ -235,7 +261,7 @@ namespace UserInterface.Views
 
             if (simulationNames != null)
             {
-                var simulationFilter = $"SimulationID in ({dataStore.ToSimulationIDs(simulationNames).Join(",")})";
+                var simulationFilter = $"\"SimulationID\" in ({dataStore.ToSimulationIDs(simulationNames).Join(",")})";
                 if (string.IsNullOrEmpty(filter))
                     filter = simulationFilter;
                 else

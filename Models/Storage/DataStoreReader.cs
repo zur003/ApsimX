@@ -8,7 +8,6 @@ using APSIM.Shared.Utilities;
 
 namespace Models.Storage
 {
-
     /// <summary>
     /// A class for reading from a database connection.
     /// </summary>
@@ -107,34 +106,6 @@ namespace Models.Storage
         public List<Tuple<string, Type>> GetColumns(string tableName)
         {
             return Connection.GetColumns(tableName);
-        }
-
-        /// <summary>
-        /// Gets a "brief" column name for a column
-        /// </summary>
-        /// <param name="tablename"></param>
-        /// <param name="fullColumnName">The "full" name of the column</param>
-        /// <returns>The "brief" name of the column</returns>
-        public string BriefColumnName(string tablename, string fullColumnName)
-        {
-            if (Connection is Firebird)
-                return (Connection as Firebird).GetShortColumnName(tablename, fullColumnName);
-            else
-                return fullColumnName;
-        }
-
-        /// <summary>
-        /// Gets the "full" column name for a column
-        /// </summary>
-        /// <param name="tablename"></param>
-        /// <param name="queryColumnName"></param>
-        /// <returns>The "full" name of the column</returns>
-        public string FullColumnName(string tablename, string queryColumnName)
-        {
-            if (Connection is Firebird)
-                return (Connection as Firebird).GetLongColumnName(tablename, queryColumnName);
-            else
-                return queryColumnName;
         }
 
         /// <summary>Returns a list of table names</summary>
@@ -237,7 +208,7 @@ namespace Models.Storage
 
             // Add checkpointID to filter.
             if (fieldNamesInTable.Contains("CheckpointID") && checkpointIDs.ContainsKey(checkpointName))
-                filter = AddToFilter(filter, $"CheckpointID={checkpointIDs[checkpointName].ID}");
+                filter = AddToFilter(filter, $"\"CheckpointID\"={checkpointIDs[checkpointName].ID}");
 
             filter = RemoveSimulationNameFromFilter(filter);
 
@@ -246,24 +217,13 @@ namespace Models.Storage
 
             // Add simulationIDs to filter
             if (simulationNames != null)
-                filter = AddToFilter(filter, $"SimulationID in ({ToSimulationIDs(simulationNames).Join(",")})");
+                filter = AddToFilter(filter, $"\"SimulationID\" in ({ToSimulationIDs(simulationNames).Join(",")})");
 
             // Calculate Firebird bits
-            if (Connection is Firebird)
+            if (filter != null && Connection is Firebird)
             {
-                fieldNames = ConvertFieldNameToFirebird(fieldNames, tableName);
                 if (count > 0)
                     firebirdFirstStatement = $"FIRST {count} SKIP {from}";
-
-                var output = filter.Split('[', ']').Where((item, index) => index % 2 != 0).ToList();
-                foreach (string field in output)
-                {
-                    var shortName = (Connection as Firebird).GetShortColumnName(tableName, field);
-                    if (!string.IsNullOrEmpty(shortName))
-                    {
-                        filter = filter.Replace("[" + field + "]", "[" + shortName + "]");
-                    }
-                }
             }
 
             // Get orderby fields
@@ -310,21 +270,6 @@ namespace Models.Storage
                 }
             }
 
-            // For Firebird, we need to recover the full names of the data columns
-            if (Connection is Firebird && !tableName.StartsWith("_"))
-            {
-                foreach (DataColumn dataCol in result.Columns)
-                {
-                    if (dataCol.ColumnName.StartsWith("COL_"))
-                    {
-                        int colNo;
-                        if (Int32.TryParse(dataCol.ColumnName.Substring(4), out colNo))
-                        {
-                            dataCol.ColumnName = (Connection as Firebird).GetLongColumnName(tableName, colNo);
-                        }
-                    }
-                }
-            }
             return result;
         }
 
@@ -363,16 +308,6 @@ namespace Models.Storage
                     return filter + " AND " + filterClause;
             }
             return filter;
-        }
-
-        /// <summary>Convert field names to Firebird format.</summary>
-        /// <param name="fieldNames">The field names.</param>
-        /// <param name="tableName">The table name.</param>
-        private IEnumerable<string> ConvertFieldNameToFirebird(IEnumerable<string> fieldNames, string tableName)
-        {
-
-            foreach (var fieldName in fieldNames)
-                yield return $"COL_{(Connection as Firebird).GetColumnNumber(tableName, fieldName)}";
         }
 
         /// <param name="sql">The SQL.</param>
