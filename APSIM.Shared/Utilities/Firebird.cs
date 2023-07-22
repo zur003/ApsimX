@@ -726,18 +726,7 @@ namespace APSIM.Shared.Utilities
                     sql.Append(',');
                 sql.Append("\"");
                 string columnName = columnNames[i];
-                ///// sql.Append(columnNames[i]);
-                if (tableName.StartsWith("_")
-                || columnName.Equals("SimulationID", StringComparison.OrdinalIgnoreCase)
-                || columnName.Equals("SimulationName", StringComparison.OrdinalIgnoreCase)
-                || columnName.Equals("CheckpointID", StringComparison.OrdinalIgnoreCase)
-                || columnName.Equals("CheckpointName", StringComparison.OrdinalIgnoreCase))
-                    sql.Append(columnName.Substring(0, Math.Min(31, columnNames[i].Length))); //////
-                else
-                {
-                    int insertCol = GetColumnNumber(tableName, columnNames[i]);
-                    sql.Append("COL_" + insertCol.ToString());
-                }
+                sql.Append(columnName.Substring(0, Math.Min(63, columnNames[i].Length))); 
                 sql.Append("\"");
             }
             sql.Append(") VALUES (");
