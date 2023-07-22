@@ -2,17 +2,17 @@
 // Firebird database connection wrapper
 //-----------------------------------------------------------------------
 
+using System;
+using System.Collections.Generic;
+using System.Data;
+using System.Globalization;
+using System.Linq;
+using System.Text;
+using FirebirdSql.Data.FirebirdClient;
+using System.IO;
+
 namespace APSIM.Shared.Utilities
 {
-    using System;
-    using System.Collections.Generic;
-    using System.Data;
-    using System.Globalization;
-    using System.Linq;
-    using System.Text;
-    using FirebirdSql.Data.FirebirdClient;
-    using System.IO;
-
     /// <summary>A class representing an exception thrown by this library.</summary>
     [Serializable]
     public class FirebirdException : Exception
@@ -48,9 +48,6 @@ namespace APSIM.Shared.Utilities
 
         /// <summary>Property to return true if the database is readonly.</summary>
         public bool IsReadOnly { get; private set; }
-
-        // Dictionary to allow the column number for a "long" column name to be accessed quickly
-        private Dictionary<string, ColumnNameMap> colInfoMap = new Dictionary<string, ColumnNameMap>(StringComparer.OrdinalIgnoreCase);
 
         /// <summary>Begin a transaction.</summary>
         public void BeginTransaction()
@@ -148,26 +145,6 @@ namespace APSIM.Shared.Utilities
                     fbDBDataSet.Locale = CultureInfo.InvariantCulture;
                     fbDBConnection.ConnectionString = GetConnectionString(dbpath, source, user, pass);
                     fbDBConnection.Open();
-                }
-                if (TableExists("_ColumnInfo"))
-                {
-                    DataTable colInfoTable = ExecuteQuery("SELECT \"TableName\", \"ColumnName\", \"ColumnNumber\" FROM \"_ColumnInfo\" ORDER BY \"TableName\", \"ColumnNumber\"");
-                    string currentTable = string.Empty;
-                    ColumnNameMap currentMap = null;
-                    foreach (DataRow row in colInfoTable.Rows)
-                    {
-                        string tableName = ((string)row[0]).Trim();
-                        string columnName = ((string)row[1]).Trim();
-                        int columnNumber = Convert.ToInt32(row[2], CultureInfo.InvariantCulture);
-                        if (tableName != currentTable)
-                        {
-                            currentTable = tableName;
-                            currentMap = new ColumnNameMap();
-                            colInfoMap.Add(tableName, currentMap);
-                        }
-                        currentMap.ColDict.Add(columnName, columnNumber);
-                        currentMap.LongNames.Insert(columnNumber, columnName);
-                    }
                 }
                 return true;
             }
@@ -399,89 +376,12 @@ namespace APSIM.Shared.Utilities
                 DataTable dt = ExecuteQuery(sql);
                 foreach (DataRow dr in dt.Rows)
                 {
-                    string colName = GetLongColumnName(tableName, (string)dr[0]).Trim();
+                    string colName = ((string)dr[0]).Trim();
                     if (!String.IsNullOrEmpty(colName))
                         columnNames.Add(colName);
                 }
             }
             return columnNames;
-        }
-
-        /// <summary>Gets the long name of a column</summary>
-        /// <param name="tableName">Name of the table</param>
-        /// <param name="colNo">Number of the column</param>
-        /// <returns>A string holding the long name of the column</returns>
-        public string GetLongColumnName(string tableName, int colNo)
-        {
-            if (colNo >= 0 && colInfoMap.TryGetValue(tableName, out ColumnNameMap nameMap) && colNo < nameMap.LongNames.Count)
-                return nameMap.LongNames[colNo];
-            else
-                return "";
-            /*
-            string sql = "SELECT [ColumnName] FROM [_ColumnInfo] Where [TableName] = \'" +
-                          tableName + "\' AND [ColumnNumber] = " + colNo.ToString();
-            DataTable dt = ExecuteQuery(sql);
-            if (dt.Rows.Count > 0)
-                return ((string)dt.Rows[0][0]).Trim();
-            else
-                return "";
-            */
-        }
-
-        /// <summary>Gets the short name of an existing column</summary>
-        /// <param name="tableName">Name of the table</param>
-        /// <param name="longName">Long name of the column</param>
-        /// <returns>A string holding the short name of the column</returns>
-        public string GetShortColumnName(string tableName, string longName)
-        {
-            if (tableName.StartsWith("_") || string.IsNullOrEmpty(longName)
-                || longName.Equals("SimulationID", StringComparison.OrdinalIgnoreCase)
-                || longName.Equals("SimulationName", StringComparison.OrdinalIgnoreCase)
-                || longName.Equals("CheckpointID", StringComparison.OrdinalIgnoreCase)
-                || longName.Equals("CheckpointName", StringComparison.OrdinalIgnoreCase))
-                return longName;
-            else if (colInfoMap.TryGetValue(tableName, out ColumnNameMap nameMap) && nameMap.ColDict.TryGetValue(longName, out int colNumber))
-                return "COL_" + colNumber.ToString();
-            else
-                return "";
-        }
-
-        /// <summary>Gets the long name of an existing column</summary>
-        /// <param name="tableName">Name of the table</param>
-        /// <param name="shortName">Short name of the column</param>
-        /// <returns>A string holding the long name of the column</returns>
-        public string GetLongColumnName(string tableName, string shortName)
-        {
-            if (string.IsNullOrEmpty(shortName) || tableName.StartsWith("_") || !shortName.StartsWith("COL_"))
-                return shortName;
-            else if (Int32.TryParse(shortName.Substring(4), out int colNo))
-                return GetLongColumnName(tableName, colNo);
-            else
-                return "";
-        }
-
-        /// <summary>
-        /// Get the column number for a specifed column name
-        /// </summary>
-        /// <param name="tableName">Name of the table</param>
-        /// <param name="colName">Name of the column</param>
-        /// <returns></returns>
-        public int GetColumnNumber(string tableName, string colName)
-        {
-            if (colInfoMap.TryGetValue(tableName, out ColumnNameMap nameMap) && (nameMap.ColDict.TryGetValue(colName, out int colNumber)))
-                return colNumber;
-            else
-                return -1;
-
-            /*
-            string sql = "SELECT [ColumnNumber] FROM [_ColumnInfo] Where [TableName] = \'" +
-                          tableName + "\' AND [ColumnName] = '" + colName + "'";
-            object result = ExecuteScalar(sql);
-            if (result == null)
-                return -1;
-            else
-                return (int)result;
-            */
         }
 
         /// <summary>Return a list of column names/column type tuples for a table. Never returns null.</summary>
@@ -501,7 +401,7 @@ namespace APSIM.Shared.Utilities
                 DataTable dt = ExecuteQuery(sql);
                 foreach (DataRow dr in dt.Rows)
                 {
-                    string colName = GetLongColumnName(tableName, (string)dr[0]).Trim();
+                    string colName = ((string)dr[0]).Trim();
                     if (!String.IsNullOrEmpty(colName))
                         columnNames.Add(new Tuple<string, Type>(colName, null));
                 }
@@ -617,15 +517,6 @@ namespace APSIM.Shared.Utilities
         private void DropColumn(string tableName, string colToRemove)
         {
             this.ExecuteNonQuery("ALTER TABLE \"" + tableName + "\" DROP \"" + colToRemove + "\"");
-            this.ExecuteNonQuery("DELETE FROM \"_ColumnInfo\" WHERE \"TableName\"='" + tableName + " AND \"ColumnName\"='" + colToRemove + "'");
-            if (colInfoMap.TryGetValue(tableName, out ColumnNameMap nameMap))
-            {
-                if (nameMap.ColDict.TryGetValue(colToRemove, out int colNo))
-                {
-                    nameMap.ColDict.Remove(colToRemove);
-                    nameMap.LongNames.RemoveAt(colNo);
-                }
-            }
         }
 
         /// <summary>
@@ -636,36 +527,8 @@ namespace APSIM.Shared.Utilities
         /// <param name="columnType">The db column type</param>
         public void AddColumn(string tableName, string columnName, string columnType)
         {
-            int colNo = -1;
-            if (IsOpen)
-            {
-                string sql = "select rdb$field_name from rdb$relation_fields ";
-                sql += "where rdb$relation_name = '" + tableName + "' ";
-
-                DataTable dt = ExecuteQuery(sql);
-                colNo = dt.Rows.Count;
-            }
-            AddColumn(tableName, columnName, columnType, colNo);
-        }
-
-        /// <summary>
-        /// Do an ALTER on the db table and add a column
-        /// </summary>
-        /// <param name="tableName">The table name</param>
-        /// <param name="columnName">The column to add</param>
-        /// <param name="columnType">The db column type</param>
-        /// <param name="columnNumber">The column number (-1 if not to be used)</param>
-        private void AddColumn(string tableName, string columnName, string columnType, int columnNumber)
-        {
             string colName;
-            if (tableName.StartsWith("_") || columnNumber < 0
-                || columnName.Equals("SimulationID", StringComparison.OrdinalIgnoreCase)
-                || columnName.Equals("SimulationName", StringComparison.OrdinalIgnoreCase)
-                || columnName.Equals("CheckpointID", StringComparison.OrdinalIgnoreCase)
-                || columnName.Equals("CheckpointName", StringComparison.OrdinalIgnoreCase))
-                colName = columnName.Substring(0, Math.Min(31, columnName.Length));
-            else
-                colName = "COL_" + columnNumber.ToString();
+            colName = columnName.Substring(0, Math.Min(63, columnName.Length));
 
             string sql;
             if (FieldExists(tableName, colName))
@@ -673,18 +536,6 @@ namespace APSIM.Shared.Utilities
 
             sql = "ALTER TABLE \"" + tableName + "\" ADD \"" + colName + "\" " + columnType;
             this.ExecuteNonQuery(sql);
-
-            this.ExecuteNonQuery("INSERT INTO \"_ColumnInfo\" VALUES('" + tableName + "', + '" + columnName + "', " + columnNumber.ToString() + ")");
-
-            ColumnNameMap nameMap;
-            if (!colInfoMap.TryGetValue(tableName, out nameMap))
-            {
-                nameMap = new ColumnNameMap();
-                colInfoMap.Add(tableName, nameMap);
-            }
-
-            nameMap.ColDict.Add(columnName, columnNumber);
-            nameMap.LongNames.Insert(columnNumber, columnName);
         }
 
         /// <summary>
@@ -939,25 +790,6 @@ namespace APSIM.Shared.Utilities
         public void CreateTable(string tableName, List<string> colNames, List<string> colTypes)
         {
 
-            // We use the _ColumnInfo table to map between column names and column numbers
-            if (TableExists("_ColumnInfo"))
-                // We're creating a new table here, so delete any old records
-                this.ExecuteNonQuery("DELETE FROM \"_ColumnInfo\" WHERE \"TableName\"='" + tableName + "'");
-            else
-                this.ExecuteNonQuery("CREATE TABLE \"_ColumnInfo\" (\"TableName\" VARCHAR(500), \"ColumnName\" VARCHAR(500), \"ColumnNumber\" INTEGER)");
-
-            ColumnNameMap nameMap;
-            if (colInfoMap.TryGetValue(tableName, out nameMap))
-            {
-                nameMap.ColDict.Clear();
-                nameMap.LongNames.Clear();
-            }
-            else
-            {
-                nameMap = new ColumnNameMap();
-                colInfoMap.Add(tableName, nameMap);
-            }
-
             StringBuilder sql = new StringBuilder();
 
             for (int c = 0; c < colNames.Count; c++)
@@ -967,24 +799,12 @@ namespace APSIM.Shared.Utilities
 
                 string columnName = colNames[c];
                 sql.Append("\"");
-                // sql.Append(colNames[c]);
-                if (tableName.StartsWith("_")
-                || columnName.Equals("SimulationID", StringComparison.OrdinalIgnoreCase)
-                || columnName.Equals("SimulationName", StringComparison.OrdinalIgnoreCase)
-                || columnName.Equals("CheckpointID", StringComparison.OrdinalIgnoreCase)
-                || columnName.Equals("CheckpointName", StringComparison.OrdinalIgnoreCase))
-                    sql.Append(columnName.Substring(0, Math.Min(31, columnName.Length))); ///// 
-                else
-                    sql.Append("COL_" + c.ToString());
+                sql.Append(columnName.Substring(0, Math.Min(63, columnName.Length)));
                 sql.Append("\" ");
                 if (colTypes[c] == null)
                     sql.Append("INTEGER");
                 else
                     sql.Append(colTypes[c]);
-
-                this.ExecuteNonQuery("INSERT INTO \"_ColumnInfo\" VALUES('" + tableName + "', + '" + columnName + "', " +  c.ToString() + ")");
-                nameMap.ColDict.Add(columnName, c);
-                nameMap.LongNames.Insert(c, columnName);
             }
 
             sql.Insert(0, "CREATE TABLE \"" + tableName + "\" (");
@@ -1065,8 +885,6 @@ namespace APSIM.Shared.Utilities
             }
             if (TableExists("_ColumnInfo"))
                 this.ExecuteNonQuery("DELETE FROM \"_ColumnInfo\" WHERE \"TableName\" = '" + tableName + "'");
-            if (colInfoMap.ContainsKey(tableName))
-                colInfoMap.Remove(tableName);
         }
 
         /// <summary>
