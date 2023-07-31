@@ -18,6 +18,8 @@ namespace Models.Storage
         /// </summary>
         private DataTable dataTable;
 
+        static private object fbMessageQuery = null;
+
         /// <summary>
         /// Constructor
         /// </summary>
@@ -45,6 +47,14 @@ namespace Models.Storage
         /// <param name="database">The database to write to.</param>
         public object GetPreparedQuery(IDatabaseConnection database)
         {
+            if (dataTable.TableName == "_Messages" && database is Firebird)
+            {
+                if (fbMessageQuery == null)
+                {
+                    fbMessageQuery = database.PrepareBindableInsertQuery(dataTable);
+                }
+                return fbMessageQuery;
+            }
             // Get a list of column names.
             var columnNames = dataTable.Columns.Cast<DataColumn>().Select(col => col.ColumnName);
 
@@ -70,9 +80,12 @@ namespace Models.Storage
 
         internal void Close(IDatabaseConnection database)
         {
-            foreach (var query in queryCache)
-                database.FinalizeBindableQuery(query.Item2);
-            queryCache.Clear();
+            if (!(dataTable.TableName == "_Messages" && database is Firebird))
+            {
+                foreach (var query in queryCache)
+                    database.FinalizeBindableQuery(query.Item2);
+                queryCache.Clear();
+            }
         }
     }
 }
