@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading;
 using APSIM.Shared.JobRunning;
 using APSIM.Shared.Utilities;
+using FirebirdSql.Data.FirebirdClient;
 
 namespace Models.Storage
 {
@@ -56,26 +57,46 @@ namespace Models.Storage
         {
             if (dataToWrite.Rows.Count > 0)
             {
-                var query = new InsertQuery(dataToWrite);
+                connection.BeginTransaction();
 
                 // Make sure the table has the correct columns.
                 tableDetails.EnsureTableExistsAndHasRequiredColumns(dataToWrite);
+
+                if (deleteExistingRows && connection.TableExists(dataToWrite.TableName))
+                {
+                    // fixme - this assumes that "Current" checkpoint ID is always 1.
+                    // This should always be correct afaik, but it would be better to
+                    // verify this at runtime.
+                    bool tableHasCheckpointID = connection.GetColumns(dataToWrite.TableName).Any(c => c.Item1 == "CheckpointID");
+                    connection.ExecuteNonQuery($"DELETE FROM [{dataToWrite.TableName}] {(tableHasCheckpointID ? "WHERE \"CheckpointID\" = 1" : "")}");
+                }
+
+                if (connection is Firebird)
+                {
+                    // Treat single-line messages as a special case
+                    if (dataToWrite.TableName == "_Messages" && dataToWrite.Rows.Count == 1)
+                    {
+                        (connection as Firebird).InsertMessageRecord(dataToWrite);
+                        return;
+                    }
+                    /*
+                    // At this point is time, the .Net driver doesn't support batch insertion
+                    // with the embedded server.
+                    else if ((connection as Firebird).fbDBServerType == FbServerType.Default)
+                    { 
+                        (connection as Firebird).InsertTableBatch(dataToWrite);
+                        return;
+                    }*/
+                    // Otherwise drop through and use InsertQuery
+                }
+
+                var query = new InsertQuery(dataToWrite);
 
                 // Get a list of column names.
                 var columnNames = dataToWrite.Columns.Cast<DataColumn>().Select(col => col.ColumnName);
 
                 try
                 {
-                    connection.BeginTransaction();
-
-                    if (deleteExistingRows)
-                    {
-                        // fixme - this assumes that "Current" checkpoint ID is always 1.
-                        // This should always be correct afaik, but it would be better to
-                        // verify this at runtime.
-                        bool tableHasCheckpointID = connection.GetColumns(dataToWrite.TableName).Any(c => c.Item1 == "CheckpointID");
-                        connection.ExecuteNonQuery($"DELETE FROM [{dataToWrite.TableName}] {(tableHasCheckpointID ? "WHERE \"CheckpointID\" = 1" : "")}");
-                    }
                     // Write all rows.
                     foreach (DataRow row in dataToWrite.Rows)
                         query.ExecuteQuery(connection, columnNames, row.ItemArray);

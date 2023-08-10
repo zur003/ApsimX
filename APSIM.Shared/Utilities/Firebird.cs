@@ -8,10 +8,15 @@ using System.Data;
 using System.Globalization;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using FirebirdSql.Data.FirebirdClient;
 using System.IO;
 using APSIM.Shared.Documentation.Extensions;
 using System.Security.Cryptography;
+using System.ComponentModel.DataAnnotations;
+using DocumentFormat.OpenXml.Wordprocessing;
+using System.Runtime.CompilerServices;
+using System.Transactions;
 
 namespace APSIM.Shared.Utilities
 {
@@ -31,22 +36,55 @@ namespace APSIM.Shared.Utilities
     /// <summary>
     /// A wrapper for a Firebird database connection
     /// </summary>
+    /// <remarks>
+    /// This actually wrapper doesn't just provide a single connection. 
+    /// The Firebird architecture does not support mulitple threads using 
+    /// the same connection, so what we do here is maintain a pool of connections,
+    /// one for each thread.
+    /// Transaction logic is all handled internally. External calls to "BeginTransaction"
+    /// and "EndTransaction" are ignored.
+    /// </remarks>
     [Serializable]
     public class Firebird : IDatabaseConnection
     {
         /// <summary>
         /// Firebird connection properties 
         /// </summary>
-        private FbConnection fbDBConnection = new FbConnection();
+        // private FbConnection fbDBConnection = new FbConnection();
+        private Dictionary<Thread, FbConnection> connectionPool = new Dictionary<Thread, FbConnection> ();
 
-        private FbTransaction transaction;
+        /// <summary>
+        /// Holds the connection string. Kept as a class member so we can re-use it for each
+        /// Connection we create.
+        /// </summary>
+        private string connectionString;
+
+        private FbCommand msgQuery = null;
 
         private DataSet fbDBDataSet = new DataSet();
 
         //Set the ServerType to 1 for connect to the embedded server
-        private FbServerType fbDBServerType = FbServerType.Embedded;
+        /// <summary>
+        /// Whether embedded server or not
+        /// </summary>
+        public FbServerType fbDBServerType = FbServerType.Default;
 
-        /// <summary>Property to return true if the database is open.</summary>
+        private FbConnection fbDBConnection
+        { 
+            get
+            {
+                Thread t = Thread.CurrentThread;
+                FbConnection connection;
+                if (!connectionPool.TryGetValue(t, out connection))
+                {
+                    connection = new FbConnection();
+                    connectionPool.Add(t, connection);
+                }
+                return connection;
+            }
+        }
+
+        /// <summary>Property to return true if the database connection is open.</summary>
         /// <value><c>true</c> if this instance is open; otherwise, <c>false</c>.</value>
         public bool IsOpen { get { return fbDBConnection.State == ConnectionState.Open; } }
 
@@ -56,11 +94,39 @@ namespace APSIM.Shared.Utilities
         /// <summary>Begin a transaction.</summary>
         public void BeginTransaction()
         {
-        }
+        } 
 
         /// <summary>End a transaction.</summary>
         public void EndTransaction()
         {
+        }
+
+        private FbTransaction OpenTransaction()
+        {
+            if (!connectionPool.TryGetValue(Thread.CurrentThread, out var connection))
+            {
+                throw new FirebirdException("Cannot begin Transaction; the Firebird connection has not been initialised on this thread.");
+            }
+            var transactionOptions = new FbTransactionOptions()
+            {
+                TransactionBehavior = FbTransactionBehavior.Concurrency |
+                          FbTransactionBehavior.Wait |
+                          FbTransactionBehavior.NoAutoUndo,
+                WaitTimeout = new TimeSpan(0, 0, 15) // allow up to 15 seconds to resolve wait conditions
+            };
+            return connection.BeginTransaction(transactionOptions);
+        }
+
+        private void CloseTransaction(ref FbTransaction transaction)
+        {
+            if (transaction != null)
+            {
+                if (transaction.Connection != null)
+                    transaction.Commit();
+                transaction.Dispose();
+                transaction = null;
+            }
+
         }
 
         /// <summary>Opens or creates Firebird database with the specified path</summary>
@@ -77,21 +143,9 @@ namespace APSIM.Shared.Utilities
                 {
                     // create a new database
                     FbConnection.CreateDatabase(GetConnectionString(path, "localhost", "SYSDBA", "masterkey"), 4096, false, true);
-                    // FbConnection.CreateDatabase(GetConnectionString(path, "localhost", "SYSDBA", "masterkey"), true);
-                    // TODO: may need to create tables here
-
                 }
             }
             OpenSQLConnection(path, "localhost", "SYSDBA", "masterkey");
-            var transactionOptions = new FbTransactionOptions()
-            {
-                TransactionBehavior = FbTransactionBehavior.Concurrency |
-                          FbTransactionBehavior.Wait |
-                          FbTransactionBehavior.NoAutoUndo
-            };
-            transaction = fbDBConnection.BeginTransaction(transactionOptions);
-
-            // DataTable dt = ExecuteQuery("SELECT \"ID\" AS \"ThisIsAVeryLongAliasForTestingPurposes\" FROM \"_Simulations\"");
             IsReadOnly = readOnly;
         }
 
@@ -120,6 +174,7 @@ namespace APSIM.Shared.Utilities
             cs.ConnectionLifeTime = 30;
             cs.ServerType = fbDBServerType;
             cs.ClientLibrary = "fbclient.dll";
+            // cs.Pooling = false; // TEST
 
             fbDBDataSet.Locale = CultureInfo.InvariantCulture;
             string connstr = cs.ToString();
@@ -134,21 +189,17 @@ namespace APSIM.Shared.Utilities
         /// <summary>Closes the Firebird database</summary>
         public void CloseDatabase()
         {
-            if (transaction != null)
+            foreach (var connData in connectionPool)
             {
-                if (transaction.Connection != null)
-                {
-                    transaction.Commit();
-                }
+               var connection = connData.Value;
+                if (connection.State == ConnectionState.Open)
+                    connection.Close();
+                connection.Dispose();
+                connection = null;
             }
-            transaction.Dispose();
-            transaction = null;
-            if (fbDBConnection.State == ConnectionState.Open)
-            {
-                fbDBConnection.Close();
-                fbDBConnection.Dispose();
-                fbDBConnection = null;
-            }
+            connectionPool.Clear();
+            fbDBConnection.Close();
+            fbDBConnection.Dispose();
         }
 
         /// <summary>
@@ -166,7 +217,8 @@ namespace APSIM.Shared.Utilities
                 if (fbDBConnection.State == ConnectionState.Closed)
                 {
                     fbDBDataSet.Locale = CultureInfo.InvariantCulture;
-                    fbDBConnection.ConnectionString = GetConnectionString(dbpath, source, user, pass);
+                    connectionString = GetConnectionString(dbpath, source, user, pass);
+                    fbDBConnection.ConnectionString = connectionString;
                     fbDBConnection.Open();
                 }
                 return true;
@@ -177,24 +229,37 @@ namespace APSIM.Shared.Utilities
             }
         }
 
+        private bool EnsureOpen()
+        {
+            if (!IsOpen)
+            {
+                fbDBConnection.ConnectionString = connectionString;
+                try
+                {
+                    fbDBConnection.Open();
+                }
+                catch
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
+
         /// <summary>Executes a query that returns no results</summary>
         /// <param name="query">SQL query to execute</param>
         public void ExecuteNonQuery(string query)
         {
-            if (!IsOpen)
-            {
-                fbDBConnection.Open();
-            }
-            if (IsOpen)
+            if (EnsureOpen())
             {
                 query = AdjustQuotedFields(query);
+                FbTransaction transaction = OpenTransaction();
                 FbCommand myCmd = new FbCommand(query, fbDBConnection, transaction);
                 myCmd.CommandType = CommandType.Text;
 
                 try
                 {
                     myCmd.ExecuteNonQuery();
-                    transaction.CommitRetaining();
                 }
                 catch (Exception ex)
                 {
@@ -207,6 +272,7 @@ namespace APSIM.Shared.Utilities
                         myCmd.Dispose();
                         myCmd = null;
                     }
+                    CloseTransaction(ref transaction);
                 }
             }
             else
@@ -218,13 +284,10 @@ namespace APSIM.Shared.Utilities
         public object ExecuteScalar(string query)
         {
             object result = null;
-            if (!IsOpen)
-            {
-                fbDBConnection.Open();
-            }
-            if (IsOpen)
+            if (EnsureOpen())
             {
                 query = AdjustQuotedFields(query);
+                FbTransaction transaction = OpenTransaction(); 
                 FbCommand myCmd = new FbCommand(query, fbDBConnection, transaction);
                 myCmd.CommandType = CommandType.Text;
 
@@ -243,6 +306,7 @@ namespace APSIM.Shared.Utilities
                         myCmd.Dispose();
                         myCmd = null;
                     }
+                    CloseTransaction(ref transaction);
                 }
             }
             else
@@ -258,13 +322,11 @@ namespace APSIM.Shared.Utilities
         public System.Data.DataTable ExecuteQuery(string query)
         {
             DataTable dt = null;
-
-            if (!IsOpen)
-                fbDBConnection.Open();  // assume the connection string has been set already
-            if (IsOpen)
+            if (EnsureOpen())
             {
                 query = AdjustQuotedFields(query);
                 dt = new DataTable();
+                FbTransaction transaction = OpenTransaction();
                 FbCommand myCmd = new FbCommand(query, fbDBConnection, transaction);
                 myCmd.CommandType = CommandType.Text;
 
@@ -285,6 +347,7 @@ namespace APSIM.Shared.Utilities
                         myCmd.Dispose();
                         myCmd = null;
                     }
+                    CloseTransaction(ref transaction);
                 }
             }
             else
@@ -301,7 +364,7 @@ namespace APSIM.Shared.Utilities
         /// <returns>The integer for the column (0-n) for the first row</returns>
         public int ExecuteQueryReturnInt(string query, int ColumnNumber)
         {
-            if (!IsOpen)
+            if (!EnsureOpen())
                 throw new FirebirdException("Firebird database is not open.");
 
             int ReturnValue = -1;
@@ -320,54 +383,65 @@ namespace APSIM.Shared.Utilities
         /// <param name="values">The values.</param>
         public void BindParametersAndRunQuery(string query, object[] values)
         {
-            using (FbCommand cmd = new FbCommand(query, fbDBConnection, transaction) /*  fbDBConnection.CreateCommand()*/)
+            if (!EnsureOpen())
+                throw new FirebirdException("Firebird database is not open.");
+
+            FbTransaction transaction = OpenTransaction();
+            try
             {
-                //cmd.Transaction = transaction;
-                //cmd.CommandText = query;
-                //cmd.CommandType = CommandType.Text;
-                for (int i = 0; i < values.Length; i++)
+                using (FbCommand cmd = new FbCommand(query, fbDBConnection, transaction) /*  fbDBConnection.CreateCommand()*/)
                 {
-                    if (Convert.IsDBNull(values[i]) || values[i] == null)
+                    //cmd.Transaction = transaction;
+                    //cmd.CommandText = query;
+                    //cmd.CommandType = CommandType.Text;
+                    for (int i = 0; i < values.Length; i++)
                     {
-                        cmd.Parameters.Add("@" + ((i + 1).ToString()), FbDbType.Text).Value = string.Empty;
+                        if (Convert.IsDBNull(values[i]) || values[i] == null)
+                        {
+                            cmd.Parameters.Add("@" + ((i + 1).ToString()), FbDbType.Text).Value = string.Empty;
+                        }
+                        // Enums have an underlying type of Int32, but we want to store
+                        // their string representation, not their integer value
+                        else if (values[i].GetType().IsEnum)
+                        {
+                            cmd.Parameters.Add("@" + ((i + 1).ToString()), FbDbType.Text).Value = values[i].ToString();
+                        }
+                        else if (values[i].GetType() == typeof(DateTime))
+                        {
+                            DateTime d = (DateTime)values[i];
+                            cmd.Parameters.Add("@" + ((i + 1).ToString()), FbDbType.Text).Value = d.ToString("dd.MM.yyyy, hh:mm:ss.000");
+                        }
+                        else if (values[i].GetType() == typeof(int))
+                        {
+                            int integer = (int)values[i];
+                            cmd.Parameters.Add("@" + ((i + 1).ToString()), FbDbType.Integer).Value = integer;
+                        }
+                        else if (values[i].GetType() == typeof(float))
+                        {
+                            float f = (float)values[i];
+                            cmd.Parameters.Add("@" + ((i + 1).ToString()), FbDbType.Float).Value = f;
+                        }
+                        else if (values[i].GetType() == typeof(double))
+                        {
+                            double d = (double)values[i];
+                            cmd.Parameters.Add("@" + ((i + 1).ToString()), FbDbType.Double).Value = d;
+                        }
+                        else if (values[i].GetType() == typeof(byte[]))
+                        {
+                            byte[] bytes = values[i] as byte[];
+                            cmd.Parameters.Add("@" + ((i + 1).ToString()), FbDbType.Binary).Value = bytes;
+                        }
+                        else
+                            cmd.Parameters.Add("@" + ((i + 1).ToString()), FbDbType.Text).Value = values[i] as string;
                     }
-                    // Enums have an underlying type of Int32, but we want to store
-                    // their string representation, not their integer value
-                    else if (values[i].GetType().IsEnum)
-                    {
-                        cmd.Parameters.Add("@" + ((i + 1).ToString()), FbDbType.Text).Value = values[i].ToString();
-                    }
-                    else if (values[i].GetType() == typeof(DateTime))
-                    {
-                        DateTime d = (DateTime)values[i];
-                        cmd.Parameters.Add("@" + ((i + 1).ToString()), FbDbType.Text).Value = d.ToString("dd.MM.yyyy, hh:mm:ss.000");
-                    }
-                    else if (values[i].GetType() == typeof(int))
-                    {
-                        int integer = (int)values[i];
-                        cmd.Parameters.Add("@" + ((i + 1).ToString()), FbDbType.Integer).Value = integer;
-                    }
-                    else if (values[i].GetType() == typeof(float))
-                    {
-                        float f = (float)values[i];
-                        cmd.Parameters.Add("@" + ((i + 1).ToString()), FbDbType.Float).Value = f;
-                    }
-                    else if (values[i].GetType() == typeof(double))
-                    {
-                        double d = (double)values[i];
-                        cmd.Parameters.Add("@" + ((i + 1).ToString()), FbDbType.Double).Value = d;
-                    }
-                    else if (values[i].GetType() == typeof(byte[]))
-                    {
-                        byte[] bytes = values[i] as byte[];
-                        cmd.Parameters.Add("@" + ((i + 1).ToString()), FbDbType.Binary).Value = bytes;
-                    }
-                    else
-                        cmd.Parameters.Add("@" + ((i + 1).ToString()), FbDbType.Text).Value = values[i] as string;
+                    cmd.Prepare();
+                    cmd.ExecuteNonQuery();
+                    cmd.Dispose();
                 }
-                cmd.Prepare();
-                cmd.ExecuteNonQuery();
-                cmd.Dispose();
+            }
+            finally
+            {
+                CloseTransaction(ref transaction);
             }
         }
 
@@ -377,14 +451,14 @@ namespace APSIM.Shared.Utilities
         public List<string> GetColumnNames(string tableName)
         {
             List<string> columnNames = new List<string>();
-
-            if (IsOpen)
+            EnsureOpen();
+            if (EnsureOpen())
             {
                 DataTable dt = fbDBConnection.GetSchema("Columns", new string[] { null, null, tableName });
                 foreach (DataRow dr in dt.Rows)
                 {
                     string colName = ((string)dr["COLUMN_NAME"]).Trim();
-                    if (!String.IsNullOrEmpty(colName))
+                    if (!String.IsNullOrEmpty(colName) && colName != "rowid")
                         columnNames.Add(colName);
                 }
             }
@@ -397,14 +471,13 @@ namespace APSIM.Shared.Utilities
         public List<Tuple<string, Type>> GetColumns(string tableName)
         {
             var columnNames = new List<Tuple<string, Type>>();
-
-            if (IsOpen)
+            if (EnsureOpen())
             {
                 DataTable dt = fbDBConnection.GetSchema("Columns", new string[] { null, null, tableName });
                 foreach (DataRow dr in dt.Rows)
                 {
                     string colName = ((string)dr["COLUMN_NAME"]).Trim();
-                    if (!String.IsNullOrEmpty(colName))
+                    if (!String.IsNullOrEmpty(colName) && colName != "rowid")
                     {
                         string colType = ((string)dr["COLUMN_DATA_TYPE"]).Trim();
                         Type type = null;
@@ -435,11 +508,15 @@ namespace APSIM.Shared.Utilities
         public List<string> GetTableNames()
         {
             List<string> tableNames = new List<string>();
-            if (IsOpen)
+            if (EnsureOpen())
             {
                 DataTable userTables = fbDBConnection.GetSchema("Tables", new string[] { null, null, null, "TABLE" });
                 foreach (DataRow dr in userTables.Rows)
-                    tableNames.Add(((string)dr["TABLE_NAME"]).Trim());
+                {
+                    string tableName = ((string)dr["TABLE_NAME"]).Trim();
+                    if (!String.IsNullOrEmpty(tableName) && tableName != "keyset")
+                        tableNames.Add(tableName);
+                }
             }
             return tableNames;
         }
@@ -451,7 +528,7 @@ namespace APSIM.Shared.Utilities
         public List<string> GetViewNames()
         {
             List<string> viewNames = new List<string>();
-            if (IsOpen)
+            if (EnsureOpen()) 
             {
                 DataTable dt = fbDBConnection.GetSchema("Views"); 
                 foreach (DataRow dr in dt.Rows)
@@ -526,8 +603,7 @@ namespace APSIM.Shared.Utilities
         public void AddColumn(string tableName, string columnName, string columnType)
         {
             string colName = columnName.Trim();
-            int nBytes = Encoding.UTF8.GetByteCount(colName);
-            if (nBytes > 63)
+            if (colName.Length > 63)
             {
                 throw new FirebirdException("Unable to add a column named " + columnName + "because the name is too long.");
             }
@@ -548,7 +624,7 @@ namespace APSIM.Shared.Utilities
         /// <returns>True if the field exists in the database</returns>
         public bool FieldExists(string table, string fieldname)
         {
-            if (IsOpen)
+            if (EnsureOpen())
             {
                 DataTable dt = fbDBConnection.GetSchema("Columns", new string[] { null, null, table, fieldname });
                 return dt.Rows.Count > 0;
@@ -575,7 +651,11 @@ namespace APSIM.Shared.Utilities
                     sql.Append(',');
                 sql.Append("\"");
                 string columnName = columnNames[i];
-                sql.Append(columnName.Substring(0, Math.Min(63, columnNames[i].Length))); 
+                if (columnName.Length > 63)
+                {
+                    throw new FirebirdException("Unable to add a column named " + columnName + "because the name is too long.");
+                }
+                sql.Append(columnName); 
                 sql.Append("\"");
             }
             sql.Append(") VALUES (");
@@ -601,6 +681,9 @@ namespace APSIM.Shared.Utilities
         /// <returns></returns>
         public int InsertRows(string tableName, List<string> columnNames, List<object[]> values)
         {
+            if (!EnsureOpen())
+                throw new FirebirdException("Firebird database is not open.");
+
             {
                 int index = 0;
                 try
@@ -611,7 +694,6 @@ namespace APSIM.Shared.Utilities
                     {
                         BindParametersAndRunQuery(sql, values[index]);
                     }
-                    transaction.CommitRetaining();
                 }
                 catch (Exception ex)
                 {
@@ -628,11 +710,13 @@ namespace APSIM.Shared.Utilities
         /// <returns>A "handle" for the resulting query</returns>
         public object PrepareBindableInsertQuery(DataTable table)
         {
+            if (!EnsureOpen())
+                throw new FirebirdException("Firebird database is not open.");
+
             var columnNames = table.Columns.Cast<DataColumn>().Select(col => col.ColumnName).ToList<string>();
             var sql = CreateInsertSQL(table.TableName, columnNames);
-            FbCommand cmd = new FbCommand(sql, fbDBConnection, transaction) /*fbDBConnection.CreateCommand()*/;
-            //cmd.Transaction = transaction;
-            //cmd.CommandText = sql;
+            FbTransaction transaction = OpenTransaction();
+            FbCommand cmd = new FbCommand(sql, fbDBConnection, transaction);
             cmd.CommandType = CommandType.Text;
             int i = 1;
             foreach (DataColumn column in table.Columns)
@@ -665,8 +749,10 @@ namespace APSIM.Shared.Utilities
                 {
                     newParam = cmd.Parameters.Add("@" + ((i).ToString()), FbDbType.Binary);
                 }
-                else
+                else if (table.TableName.StartsWith("_"))
                     newParam = cmd.Parameters.Add("@" + ((i).ToString()), FbDbType.Text);
+                else
+                    newParam = cmd.Parameters.Add("@" + ((i).ToString()), FbDbType.VarChar);
                 newParam.IsNullable = true;
                 i++;
             }
@@ -681,6 +767,9 @@ namespace APSIM.Shared.Utilities
         /// <param name="values">The values to be inserted by using the query</param>
         public void RunBindableQuery(object bindableQuery, IEnumerable<object> values)
         {
+            if (!EnsureOpen())
+                throw new FirebirdException("Firebird database is not open.");
+
             FbCommand cmd = (FbCommand)bindableQuery;
             int i = 0;
             foreach (var value in values)
@@ -689,6 +778,8 @@ namespace APSIM.Shared.Utilities
                 // their string representation, not their integer value
                 if (value.GetType().IsEnum)
                     cmd.Parameters[i].Value = value.ToString();
+                else if ((value.GetType() == typeof(string)) && (cmd.Parameters[i].FbDbType == FbDbType.VarChar))
+                    cmd.Parameters[i].Value = (value as string).Substring(0, Math.Min(50, (value as string).Length)); // Using VARCHAR(50); truncate to 50 characters
                 else
                     cmd.Parameters[i].Value = value;
                 i++;
@@ -704,12 +795,13 @@ namespace APSIM.Shared.Utilities
         {
             FbCommand command = (FbCommand)bindableQuery;
             if (command.Transaction != null)
-                command.Transaction.CommitRetaining();
+            {
+                FbTransaction transaction = command.Transaction;
+                CloseTransaction(ref transaction);
+                command.Transaction = null;
+            }
             command.Dispose();
         }
-
-        private object lockThis = new object();
-
 
         /// <summary>Convert .NET type into an SQLite type</summary>
         public string GetDBDataTypeName(object value)
@@ -769,9 +861,9 @@ namespace APSIM.Shared.Utilities
         /// <summary>Create the new table</summary>
         public void CreateTable(string tableName, List<string> colNames, List<string> colTypes)
         {
-
             StringBuilder sql = new StringBuilder();
 
+            sql.Append("\"rowid\" integer generated by default as identity primary key");
             for (int c = 0; c < colNames.Count; c++)
             {
                 if (sql.Length > 0)
@@ -779,7 +871,7 @@ namespace APSIM.Shared.Utilities
 
                 string columnName = colNames[c].Trim();
                 sql.Append("\"");
-                if (Encoding.UTF8.GetByteCount(columnName) > 63)
+                if (columnName.Length > 63)
                     throw new FirebirdException("Unable to add a column named " + columnName + "because the name is too long.");
                 sql.Append(columnName);
                 sql.Append("\" ");
@@ -792,7 +884,6 @@ namespace APSIM.Shared.Utilities
             sql.Insert(0, "CREATE TABLE \"" + tableName + "\" (");
             sql.Append(')');
             this.ExecuteNonQuery(sql.ToString());
-
         }
 
         /// <summary>Create a new table</summary>
@@ -860,13 +951,7 @@ namespace APSIM.Shared.Utilities
         /// <param name="tableName"></param>
         public void DropTable(string tableName)
         {
-            if (!tableName.Equals("_ColumnInfo", StringComparison.OrdinalIgnoreCase))
-            {
-                // FbConnection.ClearPool(fbDBConnection);
-                this.ExecuteNonQuery(string.Format("DROP TABLE \"{0}\"", tableName));
-            }
-            if (TableExists("_ColumnInfo"))
-                this.ExecuteNonQuery("DELETE FROM \"_ColumnInfo\" WHERE \"TableName\" = '" + tableName + "'");
+            this.ExecuteNonQuery(string.Format("DROP TABLE \"{0}\"", tableName));
         }
 
         /// <summary>
@@ -890,48 +975,130 @@ namespace APSIM.Shared.Utilities
             return string.Format("'{0, 1}.{1, 1}.{2, 1:d4}, {3, 1}:{4, 1}:{5, 1}.000'", value.Day, value.Month, value.Year, value.Hour, value.Minute, value.Second);
         }
 
+        private DataTable msgTable = null;
+
+        /// <summary>
+        /// Indicates that writing to the database has concluded (for the moment).
+        /// Provides a chance to clean up any buffers still in use.
+        /// </summary>
+        public void EndWriting()
+
+        {
+            WriteMsgTable();
+            if (msgQuery != null) 
+                msgQuery.Dispose();
+        }
+
+        private void WriteMsgTable()
+        {
+            if (msgTable != null && msgTable.Rows.Count > 0)
+            {
+                FbCommand messageQuery = PrepareBindableInsertQuery(msgTable) as FbCommand;
+                try
+                {
+                    // Write all rows.
+                    foreach (DataRow row in msgTable.Rows)
+                        RunBindableQuery(messageQuery, row.ItemArray);
+                    msgTable.Rows.Clear();
+                }
+                finally
+                {
+                    var transaction = messageQuery.Transaction;
+                    CloseTransaction(ref transaction);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Insert a single record from the "_Messages" table
+        /// We need to process a lot of one-line messages, so it's most efficient
+        /// to maintain a pre-processed query to handle the task.
+        /// 
+        /// Also, committing a single line at a time slows things down. We can deal with that
+        /// by accumulating the records into a DataTable until we hit some arbitrary length 
+        /// (say 100 rows), then write them all out at once. We need to be sure to write out
+        /// whatever is in the table at the end of the run, as well.
+        /// </summary>
+        /// <param name="table"></param>
+        public void InsertMessageRecord(DataTable table)
+        {
+            if (table.TableName != "_Messages")
+                throw new FirebirdException("Incorrect table passed to InsertMessageRecord");
+
+            if (msgTable == null)
+                msgTable = table.Clone();
+            msgTable.ImportRow(table.Rows[0]);
+
+            if (msgTable.Rows.Count >= 250)
+                WriteMsgTable();
+        }
+
         /// <summary>
         /// Insert entire table using batch command
+        /// I had expected this approach to be noticeably faster than using a prepared
+        /// bindable query, but it actually seems to be slower. So I'm not going to use
+        /// this at the moment, but things may change with newer versions of Firebird
+        /// and its ADO driver, so I'm leaving it here just in case.
         /// </summary>
         /// <param name="table">Table with values to be inserted</param>
         public void InsertTableBatch(DataTable table)
         {
+            if (!EnsureOpen())
+                throw new FirebirdException("Firebird database is not open.");
+
+            FbTransaction transaction = OpenTransaction();
             FbBatchCommand cmd = fbDBConnection.CreateBatchCommand();
-            var columnNames = table.Columns.Cast<DataColumn>().Select(col => col.ColumnName).ToList<string>();
-
-            StringBuilder sql = new StringBuilder();
-            sql.Append("INSERT INTO \"");
-            sql.Append(table.TableName);
-            sql.Append("\" VALUES (");
-
-            for (int i = 0; i < columnNames.Count; i++)
+            try
             {
-                if (i > 0)
-                    sql.Append(',');
-                sql.Append("\"");
-                string columnName = columnNames[i].Trim();
-                sql.Append(columnName);
-                sql.Append("\"");
-            }
-            sql.Append(')');
-            cmd.CommandText = sql.ToString();
-            cmd.Transaction = transaction;
-            foreach (DataRow row in table.Rows)
-            {
-                FbParameterCollection batchRow = cmd.AddBatchParameters();
+                var columnNames = table.Columns.Cast<DataColumn>().Select(col => col.ColumnName).ToList<string>();
+
+                StringBuilder sql = new StringBuilder();
+                sql.Append("INSERT INTO \"");
+                sql.Append(table.TableName);
+                sql.Append("\" (");
                 for (int i = 0; i < columnNames.Count; i++)
                 {
-                    var value = row[i];
-                    // Enums have an underlying type of Int32, but we want to store
-                    // their string representation, not their integer value
-                    if (value.GetType().IsEnum)
-                        batchRow.Add(columnNames[i], value.ToString());
-                    else
-                        batchRow.Add(columnNames[i], value);
+                    if (i > 0)
+                        sql.Append(',');
+                    sql.Append("\"");
+                    string columnName = columnNames[i].Trim();
+                    sql.Append(columnName);
+                    sql.Append("\"");
                 }
+                sql.Append(") VALUES (");
+
+                for (int i = 0; i < columnNames.Count; i++)
+                {
+                    if (i > 0)
+                        sql.Append(", ");
+                    sql.Append("@i");
+                    sql.Append(i.ToString());
+                }
+                sql.Append(')');
+                cmd.CommandText = sql.ToString();
+                cmd.Transaction = transaction;
+                foreach (DataRow row in table.Rows)
+                {
+                    FbParameterCollection batchRow = cmd.AddBatchParameters();
+                    for (int i = 0; i < columnNames.Count; i++)
+                    {
+                        var value = row[i];
+                        // Enums have an underlying type of Int32, but we want to store
+                        // their string representation, not their integer value
+                        if (value.GetType().IsEnum)
+                            batchRow.Add("i" + i.ToString(), value.ToString());
+                        else
+                            batchRow.Add("i" + i.ToString(), value);
+                    }
+                }
+                cmd.ExecuteNonQuery();
+
             }
-            cmd.ExecuteNonQuery();
-            transaction.CommitRetaining();
+            finally
+            {
+                cmd.Dispose();
+                CloseTransaction(ref transaction);
+            }
         }
     }
 }

@@ -222,7 +222,7 @@ namespace Models.Storage
             // Calculate Firebird bits
             if (filter != null && Connection is Firebird)
             {
-                if (count > 0)
+               if (count > 0)
                     firebirdFirstStatement = $"FIRST {count} SKIP {from}";
             }
 
@@ -240,8 +240,10 @@ namespace Models.Storage
                       $" FROM \"{tableName}\"";
             if (!string.IsNullOrEmpty(filter))
                 sql += $" WHERE {filter}";
+            sql += " ORDER BY ";
             if (orderByFields.Count > 0)
-                sql += $" ORDER BY {orderByFields.Enclose("\"", "\"").Join(",")}";
+                sql += $"{orderByFields.Enclose("\"", "\"").Join(",")}" + ",";
+            sql += "\"rowid\"";
             if (Connection is SQLite && count > 0)
                 sql += $" LIMIT {count} OFFSET {from}";
 
