@@ -152,7 +152,8 @@ namespace UserInterface.Views
                                              simulationNames,
                                              columnNames,
                                              GetRollingCursorRowFilter(startRowIndex, pageSize));
-            /* else
+            /*
+            else
                 newData = dataStore.GetData(tableName,
                                              checkpointName,
                                              simulationNames,
@@ -188,7 +189,7 @@ namespace UserInterface.Views
                          $"SELECT rowid FROM \"{tableName}\" ";
                 if (!string.IsNullOrEmpty(filter))
                     sql += $"WHERE {filter}";
-
+                dataStore.GetDataUsingSql(sql);
             }
             else if (connection is Firebird)
             {
@@ -197,8 +198,8 @@ namespace UserInterface.Views
                 sql = $"INSERT INTO \"keyset\" (\"rowid\") SELECT \"rowid\" FROM \"{tableName}\" ";
                 if (!string.IsNullOrEmpty(filter))
                     sql += $"WHERE {filter}";
+                dataStore.GetDataUsingSql(sql);
             }
-            dataStore.GetDataUsingSql(sql);
         }
 
         /// <summary>Gets a filter that includes rowid to implement data pagination (rolling cursor).</summary>

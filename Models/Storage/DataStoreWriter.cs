@@ -198,16 +198,19 @@ namespace Models.Storage
             // Otherwise, we delete all data corresponding to the "Current" checkpoint ID.
             bool tableHasCheckpointID = Connection.GetColumns(tableName).Any(c => c.Item1 == "CheckpointID");
             if (checkpointIDs.Count <= 1 || !tableHasCheckpointID)
-                sql = $"DROP TABLE \"{tableName}\"";
+                Connection.DropTable(tableName);
             else
             {
                 int currentCheckpointID = checkpointIDs["Current"].ID;
                 sql = $"DELETE FROM \"{tableName}\" WHERE \"CheckpointID\" = {currentCheckpointID}";
+
+                Connection.ExecuteNonQuery(sql);
+                lock (lockObject)
+                {
+                    if (!TablesModified.Contains(tableName))
+                        TablesModified.Add(tableName);
+                }
             }
-            Connection.ExecuteNonQuery(sql);
-            lock (lockObject)
-                if (!TablesModified.Contains(tableName))
-                    TablesModified.Add(tableName);
         }
 
         /// <summary>Wait for all records to be written.</summary>
@@ -232,6 +235,8 @@ namespace Models.Storage
                     WriteSimulationIDs();
                     WriteCheckpointIDs();
                     WriteAllUnits();
+                    WaitForIdle();
+                    Connection.EndWriting();
                 }
                 catch
                 {
@@ -242,7 +247,6 @@ namespace Models.Storage
                     WaitForIdle();
 
                     stopping = true;
-                    commandRunner?.Stop();
                     commandRunner = null;
                     commands.Clear();
                     lock (lockObject)

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using APSIM.Shared.Utilities;
+using PdfSharpCore.Pdf.Content;
 
 namespace Models.Storage
 {
@@ -39,11 +40,11 @@ namespace Models.Storage
 
         /// <summary>Ensure the specified table matches our columns and row values.</summary>
         /// <param name="table">The table definition to write to the database.</param>
-        public void EnsureTableExistsAndHasRequiredColumns(DataTable table)
+        public void EnsureTableExistsAndHasRequiredColumns(ref DataTable table)
         {
             // Check to make sure the table exists and has our columns.
             if (TableExistsInDb)
-                AlterTable(table);
+                AlterTable(ref table);
             else
                 CreateTable(table);
         }
@@ -70,15 +71,21 @@ namespace Models.Storage
             TableExistsInDb = true;
         }
 
-        /// <summary>Alter an existing table ensuring all columns exist.</summary>
+        /// <summary>Alter an existing table ensuring all columns exist.
+        /// Adjust column names in the DataTable to correspond in case with 
+        /// those already defined in the database.</summary>
         /// <param name="table">The table definition to write to the database.</param>
-        private void AlterTable(DataTable table)
+        private void AlterTable(ref DataTable table)
         {
             bool haveBegunTransaction = false;
 
             foreach (DataColumn column in table.Columns)
             {
-                if (!columnNamesInDb.Contains(column.ColumnName))
+                if (columnNamesInDb.TryGetValue(column.ColumnName, out string actualName))
+                {
+                    column.ColumnName = actualName;
+                }
+                else
                 {
                     if (!haveBegunTransaction)
                     {

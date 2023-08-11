@@ -60,7 +60,7 @@ namespace Models.Storage
                 connection.BeginTransaction();
 
                 // Make sure the table has the correct columns.
-                tableDetails.EnsureTableExistsAndHasRequiredColumns(dataToWrite);
+                tableDetails.EnsureTableExistsAndHasRequiredColumns(ref dataToWrite);
 
                 if (deleteExistingRows && connection.TableExists(dataToWrite.TableName))
                 {

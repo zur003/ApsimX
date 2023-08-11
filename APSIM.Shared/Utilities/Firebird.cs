@@ -1011,14 +1011,13 @@ namespace APSIM.Shared.Utilities
 
         /// <summary>
         /// Insert a single record from the "_Messages" table
-        /// We need to process a lot of one-line messages, so it's most efficient
-        /// to maintain a pre-processed query to handle the task.
-        /// 
-        /// Also, committing a single line at a time slows things down. We can deal with that
-        /// by accumulating the records into a DataTable until we hit some arbitrary length 
-        /// (say 100 rows), then write them all out at once. We need to be sure to write out
-        /// whatever is in the table at the end of the run, as well.
         /// </summary>
+        /// <remarks>
+        /// Committing a single line at a time slows things down. We can deal with that
+        /// by accumulating the records into a DataTable until we hit some arbitrary length 
+        /// (say 250 rows), then write them all out at once. We need to be sure to write out
+        /// whatever is in the table at the end of the run, as well.
+        /// </remarks>
         /// <param name="table"></param>
         public void InsertMessageRecord(DataTable table)
         {
