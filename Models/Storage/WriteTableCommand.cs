@@ -57,10 +57,10 @@ namespace Models.Storage
         {
             if (dataToWrite.Rows.Count > 0)
             {
-                connection.BeginTransaction();
-
                 // Make sure the table has the correct columns.
                 tableDetails.EnsureTableExistsAndHasRequiredColumns(ref dataToWrite);
+
+                connection.BeginTransaction();
 
                 if (deleteExistingRows && connection.TableExists(dataToWrite.TableName))
                 {

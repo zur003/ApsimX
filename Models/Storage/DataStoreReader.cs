@@ -250,6 +250,24 @@ namespace Models.Storage
             // Run query.
             DataTable result = Connection.ExecuteQuery(sql);
 
+            // The ADO driver for Firebird 4.0 Embedded truncates the returned field names to 31 characters,
+            // even though the names are stored correctly in the database. This is a very clumsy attempt to
+            // fix this problem.
+            if ((Connection is Firebird) && 
+                ((Connection as Firebird).fbDBServerType == FirebirdSql.Data.FirebirdClient.FbServerType.Embedded) &&
+                (result.Columns.Count == fieldNames.Count()))
+            {
+                int i = 0;
+                foreach (string field in fieldNames)
+                {
+                    if (field.Length > 31)
+                    {
+                        result.Columns[i].ColumnName = field;
+                    }
+                    i++;
+                }
+            }
+
             // Add SimulationName and CheckpointName if necessary.
             if (result.Rows.Count > 0 && fieldNamesInTable.Contains("SimulationID"))
             {

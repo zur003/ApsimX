@@ -193,7 +193,7 @@ namespace UserInterface.Views
             }
             else if (connection is Firebird)
             {
-                sql = "RECREATE GLOBAL TEMPORARY TABLE \"keyset\" (\"rowid\" INTEGER) ON COMMIT PRESERVE ROWS";
+                sql = "RECREATE GLOBAL TEMPORARY TABLE \"keyset\" (\"rowid\" BIGINT) ON COMMIT PRESERVE ROWS";
                 dataStore.GetDataUsingSql(sql);
                 sql = $"INSERT INTO \"keyset\" (\"rowid\") SELECT \"rowid\" FROM \"{tableName}\" ";
                 if (!string.IsNullOrEmpty(filter))
@@ -223,7 +223,7 @@ namespace UserInterface.Views
             if (data is null)
                 return "";
 
-            var rowIds = DataTableUtilities.GetColumnAsIntegers(data, "rowid");
+            var rowIds = DataTableUtilities.GetColumnAsLongInts(data, "rowid");
             var rowIdsCSV = StringUtilities.Build(rowIds, ",");
 
             string returnFilter = String.Empty;
