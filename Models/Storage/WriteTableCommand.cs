@@ -79,15 +79,6 @@ namespace Models.Storage
                         (connection as Firebird).InsertMessageRecord(dataToWrite);
                         return;
                     }
-                    /*
-                    // At this point is time, the .Net driver doesn't support batch insertion
-                    // with the embedded server.
-                    else if ((connection as Firebird).fbDBServerType == FbServerType.Default)
-                    { 
-                        (connection as Firebird).InsertTableBatch(dataToWrite);
-                        return;
-                    }*/
-                    // Otherwise drop through and use InsertQuery
                 }
 
                 var query = new InsertQuery(dataToWrite);

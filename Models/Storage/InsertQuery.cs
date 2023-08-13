@@ -47,15 +47,6 @@ namespace Models.Storage
         /// <param name="database">The database to write to.</param>
         public object GetPreparedQuery(IDatabaseConnection database)
         {
-            /*
-            if (dataTable.TableName == "_Messages" && database is Firebird)
-            {
-                if (fbMessageQuery == null)
-                {
-                    fbMessageQuery = database.PrepareBindableInsertQuery(dataTable);
-                }
-                return fbMessageQuery;
-            } */
             // Get a list of column names.
             var columnNames = dataTable.Columns.Cast<DataColumn>().Select(col => col.ColumnName);
 
