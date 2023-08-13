@@ -222,7 +222,7 @@ namespace Models.Storage
             // Calculate Firebird bits
             if (filter != null && Connection is Firebird)
             {
-               if (count > 0)
+                if (count > 0)
                     firebirdFirstStatement = $"FIRST {count} SKIP {from}";
             }
 
@@ -253,7 +253,7 @@ namespace Models.Storage
             // The ADO driver for Firebird 4.0 Embedded truncates the returned field names to 31 characters,
             // even though the names are stored correctly in the database. This is a very clumsy attempt to
             // fix this problem.
-            if ((Connection is Firebird) && 
+            if ((Connection is Firebird) &&
                 ((Connection as Firebird).fbDBServerType == FirebirdSql.Data.FirebirdClient.FbServerType.Embedded) &&
                 (result.Columns.Count == fieldNames.Count()))
             {
@@ -269,12 +269,18 @@ namespace Models.Storage
             }
 
             // Add SimulationName and CheckpointName if necessary.
-            if (result.Rows.Count > 0 && fieldNamesInTable.Contains("SimulationID"))
+            if (!fieldNamesInTable.Contains("CheckpointName"))
             {
                 result.Columns.Add("CheckpointName", typeof(string));
-                result.Columns.Add("SimulationName", typeof(string));
                 result.Columns["CheckpointName"].SetOrdinal(0);
+            }
+            if (!fieldNamesInTable.Contains("SimulationName"))
+            {
+                result.Columns.Add("SimulationName", typeof(string));
                 result.Columns["SimulationName"].SetOrdinal(2);
+            }
+            if (fieldNamesInTable.Contains("SimulationID"))
+            {
                 foreach (DataRow row in result.Rows)
                 {
                     string simulationName = null;
@@ -289,7 +295,6 @@ namespace Models.Storage
                     row["SimulationName"] = simulationName;
                 }
             }
-
             return result;
         }
 
