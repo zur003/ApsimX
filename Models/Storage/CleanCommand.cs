@@ -4,7 +4,7 @@ using APSIM.Shared.Utilities;
 using System.Linq;
 using System.Threading;
 using System;
-using System.Globalization;
+using Models.Core;
 
 namespace Models.Storage
 {
@@ -37,6 +37,8 @@ namespace Models.Storage
         /// </summary>
         public double Progress { get { return 0; } }
 
+        private bool isLongList = false;
+
         /// <summary>
         /// Prepare the IRunnable instance to be run.
         /// </summary>
@@ -56,11 +58,31 @@ namespace Models.Storage
             if (tableNames.Contains("_Checkpoints"))
                 currentID = writer.Connection.ExecuteQueryReturnInt("SELECT ID FROM [_Checkpoints] WHERE [Name]='Current'");
 
+            // We need to do things a bit differently in Firebird, as it has a limit of 1500 items 
+            // in the WHERE IN() clause, and with things like Wheat Validation we exceed that limit.
+
+            if (writer.Connection is Firebird)
+            {
+                List<object[]> Ids = simulationIDsCSV.Split(',').Select(c => new object[1] { Convert.ToInt32(c) }).ToList();
+                isLongList = Ids.Count > 1499;
+                if (isLongList)
+                {
+                    string sql = "RECREATE GLOBAL TEMPORARY TABLE \"_DropIDs\" (\"simID\" integer) ON COMMIT PRESERVE ROWS";
+                    writer.Connection.ExecuteNonQuery(sql);
+                    writer.Connection.InsertRows("_DropIDs", new List<string> { "simID" }, Ids);
+                }
+            }
+
             foreach (var tableName in tableNames.Where(t => !t.StartsWith("_")))
                 CleanTable(tableName, simulationIDsCSV, simulationNamesCSV, currentID);
             foreach (string tableName in otherTablesToClean)
                 if (tableNames.Contains(tableName))
                     CleanTable(tableName, simulationIDsCSV, simulationNamesCSV, currentID);
+
+            if (writer.Connection is Firebird && isLongList)
+            {
+                writer.Connection.ExecuteNonQuery("DROP TABLE \"_DropIDs\"");
+            }
         }
 
         /// <summary>
@@ -83,31 +105,42 @@ namespace Models.Storage
             var fieldNames = writer.Connection.GetColumnNames(tableName);
             if (writer.Connection is Firebird)
             {
-                // We need to do things a bit differently in Firebird, as it has a limit of 1500 items 
-                // in the WHERE IN() clause, and with things like Wheat Validation we exceed that limit.
-
                 if (fieldNames.Contains("SimulationID") && fieldNames.Contains("CheckpointID"))
                 {
-                    if (String.IsNullOrEmpty(simulationIDs))
-                        return;
-                    int[] Ids = simulationIDs.Split(',').Select(int.Parse).ToArray();
-                    int start = 0;
-                    int spanLength = 1499;
-                    int arrayLength = Ids.Length;
-                    while (start < arrayLength)
+                    // We need to do things a bit differently in Firebird, as it has a limit of 1500 items 
+                    // in the WHERE IN() clause, and with things like Wheat Validation we exceed that limit.
+
+                    if (isLongList)
                     {
-                        int useLength = Math.Min(spanLength, arrayLength - start);
-                        Span<int> span = new Span<int>(Ids, start, useLength);
-                        var simulationIDsCSV = StringUtilities.Build(span.ToArray(), ",");
-                        string sql = $"DELETE FROM [{tableName}] " +
-                                     $"WHERE \"SimulationID\" in ({simulationIDsCSV}) ";
+                        string sql = $"MERGE INTO \"{tableName}\" USING (SELECT \"rowid\" FROM \"{tableName}\", \"_DropIDs\" WHERE " +
+                                         $"\"{tableName}\".\"SimulationID\" = \"_DropIDs\".\"simID\"";
                         if (currentID != -1)
-                            sql += $"AND \"CheckpointID\" = {currentID}";
+                            sql += $" AND \"CheckpointID\" = {currentID}";
+                        sql += $") \"temp\" on \"{tableName}\".\"rowid\" = \"temp\".\"rowid\" WHEN MATCHED THEN DELETE";
                         writer.Connection.ExecuteNonQuery(sql);
-                        start += useLength;
+                    }
+                    else
+                    {
+                        // int[] Ids = simulationIDs.Split(',').Select(int.Parse).ToArray();
+                        // int start = 0;
+                        // int spanLength = 1499;
+                        // int arrayLength = Ids.Length;
+                        // while (start < arrayLength)
+                        {
+                            // int useLength = Math.Min(spanLength, arrayLength - start);
+                            // Span<int> span = new Span<int>(Ids, start, useLength);
+                            // var simulationIDsCSV = StringUtilities.Build(span.ToArray(), ",");
+                            string sql = $"DELETE FROM \"{tableName}\" " +
+                                         $"WHERE \"SimulationID\" in ({simulationIDs})";
+                            if (currentID != -1)
+                                sql += $" AND \"CheckpointID\" = {currentID}";
+                            writer.Connection.ExecuteNonQuery(sql);
+                        //    start += useLength;
+                        }
                     }
                 }
             }
+
             else
             {
                 writer.Connection.BeginTransaction();
@@ -116,7 +149,7 @@ namespace Models.Storage
                     if (fieldNames.Contains("SimulationID") && fieldNames.Contains("CheckpointID"))
                     {
                         string sql = $"DELETE FROM [{tableName}] " +
-                                     $"WHERE \"SimulationID\" in ({simulationIDs}) ";
+                        $"WHERE \"SimulationID\" in ({simulationIDs}) ";
                         if (currentID != -1)
                             sql += $"AND \"CheckpointID\" = {currentID}";
                         writer.Connection.ExecuteNonQuery(sql);

@@ -73,8 +73,10 @@ namespace Models.Storage
 
                 if (connection is Firebird)
                 {
-                    // Treat single-line messages as a special case
-                    if (dataToWrite.TableName == "_Messages" && dataToWrite.Rows.Count == 1)
+                    // Treat messages as a special case
+                    // They come in as single-row tables, so writing each
+                    // separately is not very efficient.
+                    if (dataToWrite.TableName == "_Messages")
                     {
                         (connection as Firebird).InsertMessageRecord(dataToWrite);
                         return;

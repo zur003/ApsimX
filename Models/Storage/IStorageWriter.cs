@@ -108,5 +108,12 @@ namespace Models.Storage
         /// <param name="names">A list of simulation names that are about to run.</param>
         /// <param name="wait">Wait for the clean operation to finish?</param>
         void Clean(IEnumerable<string> names, bool wait);
+
+        /// <summary>
+        /// Returns the number of entries in the command queue
+        /// </summary>
+        /// <returns></returns>
+
+        int CommandCount();
     }
 }

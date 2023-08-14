@@ -508,6 +508,14 @@ namespace Models.Storage
         }
 
         /// <summary>
+        /// Returns the number of entries in the command queue
+        /// </summary>
+        /// <returns></returns>
+        public int CommandCount()
+        {
+            return commands.Count;
+        }
+        /// <summary>
         /// Initiate a clean of the database.
         /// </summary>
         /// <param name="names">Simulation names to be cleaned.</param>

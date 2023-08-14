@@ -1026,7 +1026,8 @@ namespace APSIM.Shared.Utilities
 
             if (msgTable == null)
                 msgTable = table.Clone();
-            msgTable.ImportRow(table.Rows[0]);
+            foreach (DataRow row in table.Rows)
+               msgTable.ImportRow(row);
 
             if (msgTable.Rows.Count >= 250)
                 WriteMsgTable();
