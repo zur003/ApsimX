@@ -5,6 +5,7 @@ using System.Globalization;
 using System.Linq;
 using System.Text.RegularExpressions;
 using APSIM.Shared.Utilities;
+using SkiaSharp;
 
 namespace Models.Storage
 {
@@ -217,8 +218,19 @@ namespace Models.Storage
 
             // Add simulationIDs to filter
             if (simulationNames != null)
-                filter = AddToFilter(filter, $"\"SimulationID\" in ({ToSimulationIDs(simulationNames).Join(",")})");
-
+            {
+                string simulationIDsCSV = ToSimulationIDs(simulationNames).Join(",");
+                // Firebird "IN" predicates are limited to 1500 items. If more, we need a different approach
+                if (simulationNames.Count() > 1499 && Connection is Firebird)
+                {
+                    List<object[]> Ids = simulationIDsCSV.Split(',').Select(c => new object[1] { Convert.ToInt32(c) }).ToList();
+                    Connection.ExecuteNonQuery("RECREATE GLOBAL TEMPORARY TABLE \"_SelectIDs\" (\"simID\" integer) ON COMMIT PRESERVE ROWS");
+                    Connection.InsertRows("_SelectIDs", new List<string> { "simID" }, Ids);
+                    filter = AddToFilter(filter, $"\"SimulationID\" in (SELECT \"simID\" FROM \"_SelectIDs\")");
+                }
+                else
+                    filter = AddToFilter(filter, $"\"SimulationID\" in ({simulationIDsCSV})");
+            }
             // Calculate Firebird bits
             if (filter != null && Connection is Firebird)
             {
@@ -250,21 +262,28 @@ namespace Models.Storage
             // Run query.
             DataTable result = Connection.ExecuteQuery(sql);
 
-            // The ADO driver for Firebird 4.0 Embedded truncates the returned field names to 31 characters,
-            // even though the names are stored correctly in the database. This is a very clumsy attempt to
-            // fix this problem.
-            if ((Connection is Firebird) &&
-                ((Connection as Firebird).fbDBServerType == FirebirdSql.Data.FirebirdClient.FbServerType.Embedded) &&
-                (result.Columns.Count == fieldNames.Count()))
+            if (Connection is Firebird)
             {
-                int i = 0;
-                foreach (string field in fieldNames)
+                // Clean up the temporary table, if we created one
+                if (Connection.TableExists("_SelectIDs"))
                 {
-                    if (field.Length > 31)
+                    Connection.DropTable("_SelectIDs");
+                }
+                // The ADO driver for Firebird 4.0 Embedded truncates the returned field names to 31 characters,
+                // even though the names are stored correctly in the database. This is a very clumsy attempt to
+                // fix this problem.
+                if (((Connection as Firebird).fbDBServerType == FirebirdSql.Data.FirebirdClient.FbServerType.Embedded) &&
+                        (result.Columns.Count == fieldNames.Count()))
+                {
+                    int i = 0;
+                    foreach (string field in fieldNames)
                     {
-                        result.Columns[i].ColumnName = field;
+                        if (field.Length > 31)
+                        {
+                            result.Columns[i].ColumnName = field;
+                        }
+                        i++;
                     }
-                    i++;
                 }
             }
 

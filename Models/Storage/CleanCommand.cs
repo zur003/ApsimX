@@ -37,6 +37,10 @@ namespace Models.Storage
         /// </summary>
         public double Progress { get { return 0; } }
 
+        /// <summary>
+        /// For Firebird use - indicates a list of simulations of length 1500 or above,
+        /// which is too long to use directly in a Firebird IN predicate.
+        /// </summary>
         private bool isLongList = false;
 
         /// <summary>
@@ -61,7 +65,7 @@ namespace Models.Storage
             // We need to do things a bit differently in Firebird, as it has a limit of 1500 items 
             // in the WHERE IN() clause, and with things like Wheat Validation we exceed that limit.
 
-            if (writer.Connection is Firebird)
+            if (writer.Connection is Firebird && !String.IsNullOrEmpty(simulationIDsCSV))
             {
                 List<object[]> Ids = simulationIDsCSV.Split(',').Select(c => new object[1] { Convert.ToInt32(c) }).ToList();
                 isLongList = Ids.Count > 1499;
@@ -79,9 +83,9 @@ namespace Models.Storage
                 if (tableNames.Contains(tableName))
                     CleanTable(tableName, simulationIDsCSV, simulationNamesCSV, currentID);
 
-            if (writer.Connection is Firebird && isLongList)
+            if (writer.Connection is Firebird && isLongList && writer.Connection.TableExists("_DropIDs"))
             {
-                writer.Connection.ExecuteNonQuery("DROP TABLE \"_DropIDs\"");
+                writer.Connection.DropTable("_DropIDs");
             }
         }
 
@@ -112,6 +116,9 @@ namespace Models.Storage
 
                     if (isLongList)
                     {
+                        // We could use $"DELETE FROM \"{tableName}\" WHERE \"SimulationID\" IN (SELECT \"simID\" FROM \"_DropIDs\")",
+                        // which is a bit easier for a human to parse, but the MERGE version seems to be significantly faster
+                        // (although still quite slow)        
                         string sql = $"MERGE INTO \"{tableName}\" USING (SELECT \"rowid\" FROM \"{tableName}\", \"_DropIDs\" WHERE " +
                                          $"\"{tableName}\".\"SimulationID\" = \"_DropIDs\".\"simID\"";
                         if (currentID != -1)
@@ -121,24 +128,15 @@ namespace Models.Storage
                     }
                     else
                     {
-                        // int[] Ids = simulationIDs.Split(',').Select(int.Parse).ToArray();
-                        // int start = 0;
-                        // int spanLength = 1499;
-                        // int arrayLength = Ids.Length;
-                        // while (start < arrayLength)
-                        {
-                            // int useLength = Math.Min(spanLength, arrayLength - start);
-                            // Span<int> span = new Span<int>(Ids, start, useLength);
-                            // var simulationIDsCSV = StringUtilities.Build(span.ToArray(), ",");
-                            string sql = $"DELETE FROM \"{tableName}\" " +
-                                         $"WHERE \"SimulationID\" in ({simulationIDs})";
-                            if (currentID != -1)
-                                sql += $" AND \"CheckpointID\" = {currentID}";
-                            writer.Connection.ExecuteNonQuery(sql);
-                        //    start += useLength;
-                        }
+                        string sql = $"DELETE FROM \"{tableName}\" " +
+                                     $"WHERE \"SimulationID\" IN ({simulationIDs})";
+                        if (currentID != -1)
+                            sql += $" AND \"CheckpointID\" = {currentID}";
+                        writer.Connection.ExecuteNonQuery(sql);
                     }
                 }
+                else if (fieldNames.Contains("SimulationName") && fieldNames.Contains("CheckpointID"))
+                    throw new FirebirdException("Use of SimulationName field rather than SimulationID not currently supported by Firebird.");
             }
 
             else

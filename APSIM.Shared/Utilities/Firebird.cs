@@ -2,21 +2,15 @@
 // Firebird database connection wrapper
 //-----------------------------------------------------------------------
 
+using FirebirdSql.Data.FirebirdClient;
 using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
-using FirebirdSql.Data.FirebirdClient;
-using System.IO;
-using APSIM.Shared.Documentation.Extensions;
-using System.Security.Cryptography;
-using System.ComponentModel.DataAnnotations;
-using DocumentFormat.OpenXml.Wordprocessing;
-using System.Runtime.CompilerServices;
-using System.Transactions;
 
 namespace APSIM.Shared.Utilities
 {
@@ -37,10 +31,10 @@ namespace APSIM.Shared.Utilities
     /// A wrapper for a Firebird database connection
     /// </summary>
     /// <remarks>
-    /// This actually wrapper doesn't just provide a single connection. 
-    /// The Firebird architecture does not support mulitple threads using 
-    /// the same connection, so what we do here is maintain a pool of connections,
-    /// one for each thread.
+    /// Although implementing IDatabaseConnection, this wrapper doesn't just provide 
+    /// a single connection. The Firebird architecture does not support mulitple 
+    /// threads using the same connection, so what we do here is maintain a pool of 
+    /// connections, one for each thread.
     /// Transaction logic is all handled internally. External calls to "BeginTransaction"
     /// and "EndTransaction" are ignored.
     /// </remarks>
@@ -48,27 +42,20 @@ namespace APSIM.Shared.Utilities
     public class Firebird : IDatabaseConnection
     {
         /// <summary>
-        /// Firebird connection properties 
+        /// Pool of Firebird connections, indexed by Thread 
         /// </summary>
-        // private FbConnection fbDBConnection = new FbConnection();
-        private Dictionary<Thread, FbConnection> connectionPool = new Dictionary<Thread, FbConnection> ();
+        private Dictionary<Thread, FbConnection> connectionPool = new Dictionary<Thread, FbConnection>();
 
         /// <summary>
-        /// Holds the connection string. Kept as a class member so we can re-use it for each
-        /// Connection we create.
+        /// Holds the connection string. 
+        /// Kept as a class member so we can re-use it for each Connection we create.
         /// </summary>
         private string connectionString;
 
-        private FbCommand msgQuery = null;
-
-        private DataSet fbDBDataSet = new DataSet();
-
-        //Set the ServerType to 1 for connect to the embedded server
         /// <summary>
-        /// Whether embedded server or not
+        /// Provides the Firebird connection for the current thread. Opens a new
+        /// connection if one has not already been established
         /// </summary>
-        public FbServerType fbDBServerType = FbServerType.Embedded;
-
         private FbConnection fbDBConnection
         { 
             get
@@ -83,6 +70,13 @@ namespace APSIM.Shared.Utilities
                 return connection;
             }
         }
+
+        /// <summary>
+        /// Whether embedded server or not
+        /// Set the ServerType to FbServerType.Embedded for connection to the embedded server or
+        /// FbServerType.Default to operate with "remote" (possibley localhost) server.
+        /// </summary>
+        public FbServerType fbDBServerType { get; private set; } = FbServerType.Default;
 
         /// <summary>Property to return true if the database connection is open.</summary>
         /// <value><c>true</c> if this instance is open; otherwise, <c>false</c>.</value>
@@ -99,6 +93,26 @@ namespace APSIM.Shared.Utilities
         /// <summary>End a transaction.</summary>
         public void EndTransaction()
         {
+        }
+
+        /// <summary>Opens or creates Firebird database with the specified path</summary>
+        /// <param name="path">Path to Firebird database</param>
+        /// <param name="readOnly">if set to <c>true</c> [read only].</param>
+        /// <exception cref="FirebirdException"></exception>
+        public void OpenDatabase(string path, bool readOnly)
+        {
+            // TODO: somewhere here I need to allow server connections
+
+            if (!readOnly)
+            {
+                if (!File.Exists(path))
+                {
+                    // create a new database
+                    FbConnection.CreateDatabase(GetConnectionString(path, "localhost", "SYSDBA", "masterkey"), 4096, false, true);
+                }
+            }
+            OpenSQLConnection(path, "localhost", "SYSDBA", "masterkey");
+            IsReadOnly = readOnly;
         }
 
         private FbTransaction OpenTransaction()
@@ -129,26 +143,6 @@ namespace APSIM.Shared.Utilities
 
         }
 
-        /// <summary>Opens or creates Firebird database with the specified path</summary>
-        /// <param name="path">Path to Firebird database</param>
-        /// <param name="readOnly">if set to <c>true</c> [read only].</param>
-        /// <exception cref="FirebirdException"></exception>
-        public void OpenDatabase(string path, bool readOnly)
-        {
-            // TODO: somewhere here I need to allow server connections
-
-            if (!readOnly)
-            {
-                if (!File.Exists(path))
-                {
-                    // create a new database
-                    FbConnection.CreateDatabase(GetConnectionString(path, "localhost", "SYSDBA", "masterkey"), 4096, false, true);
-                }
-            }
-            OpenSQLConnection(path, "localhost", "SYSDBA", "masterkey");
-            IsReadOnly = readOnly;
-        }
-
         /// <summary>
         /// Build a connection string
         /// </summary>
@@ -157,7 +151,7 @@ namespace APSIM.Shared.Utilities
         /// <param name="user"></param>
         /// <param name="pass"></param>
         /// <returns></returns>
-        protected string GetConnectionString(string dbpath, string source, string user, string pass)
+        private string GetConnectionString(string dbpath, string source, string user, string pass)
         {
             FbConnectionStringBuilder cs = new FbConnectionStringBuilder();
 
@@ -176,7 +170,6 @@ namespace APSIM.Shared.Utilities
             cs.ClientLibrary = "fbclient.dll";
             // cs.Pooling = false; // TEST
 
-            fbDBDataSet.Locale = CultureInfo.InvariantCulture;
             string connstr = cs.ToString();
 
             if (cs != null)
@@ -191,11 +184,10 @@ namespace APSIM.Shared.Utilities
         {
             foreach (var connData in connectionPool)
             {
-               var connection = connData.Value;
+                var connection = connData.Value;
                 if (connection.State == ConnectionState.Open)
                     connection.Close();
                 connection.Dispose();
-                connection = null;
             }
             connectionPool.Clear();
             fbDBConnection.Close();
@@ -216,7 +208,6 @@ namespace APSIM.Shared.Utilities
             {
                 if (fbDBConnection.State == ConnectionState.Closed)
                 {
-                    fbDBDataSet.Locale = CultureInfo.InvariantCulture;
                     connectionString = GetConnectionString(dbpath, source, user, pass);
                     fbDBConnection.ConnectionString = connectionString;
                     fbDBConnection.Open();
@@ -389,11 +380,8 @@ namespace APSIM.Shared.Utilities
             FbTransaction transaction = OpenTransaction();
             try
             {
-                using (FbCommand cmd = new FbCommand(query, fbDBConnection, transaction) /*  fbDBConnection.CreateCommand()*/)
+                using (FbCommand cmd = new FbCommand(query, fbDBConnection, transaction))
                 {
-                    //cmd.Transaction = transaction;
-                    //cmd.CommandText = query;
-                    //cmd.CommandType = CommandType.Text;
                     for (int i = 0; i < values.Length; i++)
                     {
                         if (Convert.IsDBNull(values[i]) || values[i] == null)
@@ -803,10 +791,10 @@ namespace APSIM.Shared.Utilities
             command.Dispose();
         }
 
-        /// <summary>Convert .NET type into an SQLite type</summary>
+        /// <summary>Convert .NET type into an Firebird type</summary>
         public string GetDBDataTypeName(object value)
         {
-            // Convert the value we found above into an SQLite data type string and return it.
+            // Convert the value we found above into an Firebird data type string and return it.
             Type type = null;
             if (value == null)
                 return null;
@@ -819,8 +807,9 @@ namespace APSIM.Shared.Utilities
         /// <summary>Convert .NET type into an Firebird type</summary>
         public string GetDBDataTypeName(Type type)
         {
-            return GetDBDataTypeName(true);
+            return GetDBDataTypeName(type, false);
         }
+
 
         /// <summary>Convert .NET type into an Firebird type</summary>
         public string GetDBDataTypeName(Type type, bool allowLongStrings)
@@ -863,11 +852,11 @@ namespace APSIM.Shared.Utilities
         {
             StringBuilder sql = new StringBuilder();
 
+            sql.Append("CREATE TABLE \"" + tableName + "\" (");
             sql.Append("\"rowid\" bigint generated by default as identity primary key");
             for (int c = 0; c < colNames.Count; c++)
             {
-                if (sql.Length > 0)
-                    sql.Append(',');
+                sql.Append(',');
 
                 string columnName = colNames[c].Trim();
                 sql.Append("\"");
@@ -881,7 +870,6 @@ namespace APSIM.Shared.Utilities
                     sql.Append(colTypes[c]);
             }
 
-            sql.Insert(0, "CREATE TABLE \"" + tableName + "\" (");
             sql.Append(')');
             this.ExecuteNonQuery(sql.ToString());
         }
@@ -891,23 +879,22 @@ namespace APSIM.Shared.Utilities
         {
             StringBuilder sql = new StringBuilder();
 
+            sql.Append("CREATE TABLE \"" + table.TableName + "\" (");
+            sql.Append("\"rowid\" bigint generated by default as identity primary key");
             var columnNames = new List<string>();
             foreach (DataColumn column in table.Columns)
             {
-                columnNames.Add(column.ColumnName);
-                if (sql.Length > 0)
-                    sql.Append(',');
-
+                string columnName = column.ColumnName.Trim();
+                if (columnName.Length > 63)
+                    throw new FirebirdException("Unable to add a column named " + columnName + "because the name is too long.");
+                columnNames.Add(columnName);
+                sql.Append(',');
                 sql.Append("\"");
                 sql.Append(column.ColumnName);
                 sql.Append("\" ");
-                if (column.DataType == null)
-                    sql.Append("INTEGER");
-                else
-                    sql.Append(GetDBDataTypeName(column.DataType));
+                sql.Append(GetDBDataTypeName(column.DataType));
             }
 
-            sql.Insert(0, "CREATE TABLE [" + table.TableName + "] (");
             sql.Append(')');
             ExecuteNonQuery(sql.ToString());
 
@@ -931,16 +918,16 @@ namespace APSIM.Shared.Utilities
                 if (columnNamesCSV.Length > 0)
                     columnNamesCSV.Append(',');
 
-                columnNamesCSV.Append("[");
+                columnNamesCSV.Append("\"");
                 columnNamesCSV.Append(colNames[c]);
-                columnNamesCSV.Append("] ");
+                columnNamesCSV.Append("\" ");
             }
 
             string uniqueString = null;
             if (isUnique)
                 uniqueString = "UNIQUE";
 
-            var sql = String.Format("CREATE {0} INDEX [{1}Index] ON [{1}] ({2})",
+            var sql = String.Format("CREATE {0} INDEX \"{1}Index\" ON \"{1}\" ({2})",
                                     uniqueString, tableName, columnNamesCSV.ToString());
             ExecuteNonQuery(sql);
         }
@@ -985,8 +972,6 @@ namespace APSIM.Shared.Utilities
 
         {
             WriteMsgTable();
-            if (msgQuery != null) 
-                msgQuery.Dispose();
         }
 
         private void WriteMsgTable()
