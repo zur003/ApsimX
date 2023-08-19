@@ -92,7 +92,7 @@ namespace Models.Storage
         /// <summary>
         /// Cleanup the job after running it.
         /// </summary>
-        public void Cleanup()
+        public void Cleanup(System.Threading.CancellationTokenSource cancelToken)
         {
             // Do nothing.
         }
@@ -126,7 +126,7 @@ namespace Models.Storage
                         sql += $") \"temp\" on \"{tableName}\".\"rowid\" = \"temp\".\"rowid\" WHEN MATCHED THEN DELETE";
                         writer.Connection.ExecuteNonQuery(sql);
                     }
-                    else
+                    else if (!String.IsNullOrEmpty(simulationIDs))
                     {
                         string sql = $"DELETE FROM \"{tableName}\" " +
                                      $"WHERE \"SimulationID\" IN ({simulationIDs})";

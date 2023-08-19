@@ -38,15 +38,21 @@ namespace Models.Storage
         /// <summary>Does the table exist in the .db file?</summary>
         public bool TableExistsInDb { get; private set; }
 
+        /// <summary>Lock object.</summary>
+        private static object lockObject = new object();
+
         /// <summary>Ensure the specified table matches our columns and row values.</summary>
         /// <param name="table">The table definition to write to the database.</param>
         public void EnsureTableExistsAndHasRequiredColumns(ref DataTable table)
         {
-            // Check to make sure the table exists and has our columns.
-            if (TableExistsInDb)
-                AlterTable(ref table);
-            else
-                CreateTable(table);
+            lock (lockObject)
+            {
+                // Check to make sure the table exists and has our columns.
+                if (TableExistsInDb)
+                    AlterTable(ref table);
+                else
+                    CreateTable(table);
+            }
         }
 
         /// <summary>Create a table that matches the specified table.</summary>

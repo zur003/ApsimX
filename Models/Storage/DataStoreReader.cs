@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using APSIM.Shared.Utilities;
 using SkiaSharp;
+using static Models.Core.ScriptCompiler;
 
 namespace Models.Storage
 {
@@ -266,25 +267,7 @@ namespace Models.Storage
             {
                 // Clean up the temporary table, if we created one
                 if (Connection.TableExists("_SelectIDs"))
-                {
                     Connection.DropTable("_SelectIDs");
-                }
-                // The ADO driver for Firebird 4.0 Embedded truncates the returned field names to 31 characters,
-                // even though the names are stored correctly in the database. This is a very clumsy attempt to
-                // fix this problem.
-                if (((Connection as Firebird).fbDBServerType == FirebirdSql.Data.FirebirdClient.FbServerType.Embedded) &&
-                        (result.Columns.Count == fieldNames.Count()))
-                {
-                    int i = 0;
-                    foreach (string field in fieldNames)
-                    {
-                        if (field.Length > 31)
-                        {
-                            result.Columns[i].ColumnName = field;
-                        }
-                        i++;
-                    }
-                }
             }
 
             // Add SimulationName and CheckpointName if necessary.

@@ -223,7 +223,25 @@ namespace Models.Storage
             }
         }
 
-        /// <summary>Stop all writing to database.</summary>
+        /// <summary>Immediately stop all writing to database.</summary>
+        public void Cancel()
+        {
+            if (commandRunner != null)
+            {
+                stopping = true;
+                commandRunner.Stop();
+                idle = true;
+                commandRunner = null;
+                commands.Clear();
+                lock (lockObject)
+                    simulationIDs.Clear();
+                checkpointIDs.Clear();
+                simulationNamesThatHaveBeenCleanedUp.Clear();
+                units.Clear();
+            }
+        }
+
+        /// <summary>Finish all writing to database.</summary>
         public void Stop()
         {
             if (commandRunner != null)
@@ -231,11 +249,12 @@ namespace Models.Storage
                 try
                 {
                     WaitForIdle();
-
                     WriteSimulationIDs();
                     WriteCheckpointIDs();
                     WriteAllUnits();
                     WaitForIdle();
+                    // Make sure all existing writing has completed.
+                    SpinWait.SpinUntil(() => commandRunner.SimsRunning.IsEmpty);
                     Connection.EndWriting();
                 }
                 catch
@@ -245,7 +264,6 @@ namespace Models.Storage
                 finally
                 {
                     WaitForIdle();
-
                     stopping = true;
                     commandRunner = null;
                     commands.Clear();
@@ -540,7 +558,7 @@ namespace Models.Storage
                     if (commandRunner == null)
                     {
                         stopping = false;
-                        commandRunner = new JobRunner(numProcessors: 1);
+                        commandRunner = new JobRunner(numProcessors: (Connection is Firebird && (Connection as Firebird).fbDBServerType == FirebirdSql.Data.FirebirdClient.FbServerType.Default) ? -1 : 1);
                         commandRunner.Add(this);
                         commandRunner.Run();
                         ReadExistingDatabase(Connection);

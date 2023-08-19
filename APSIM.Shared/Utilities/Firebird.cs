@@ -64,6 +64,7 @@ namespace APSIM.Shared.Utilities
                 FbConnection connection;
                 if (!connectionPool.TryGetValue(t, out connection))
                 {
+                    CleanConnectionPool();
                     connection = new FbConnection();
                     connectionPool.Add(t, connection);
                 }
@@ -74,9 +75,9 @@ namespace APSIM.Shared.Utilities
         /// <summary>
         /// Whether embedded server or not
         /// Set the ServerType to FbServerType.Embedded for connection to the embedded server or
-        /// FbServerType.Default to operate with "remote" (possibley localhost) server.
+        /// FbServerType.Default to operate with "remote" (though possibly localhost) server.
         /// </summary>
-        public FbServerType fbDBServerType { get; private set; } = FbServerType.Default;
+        public FbServerType fbDBServerType { get; private set; } = FbServerType.Embedded;
 
         /// <summary>Property to return true if the database connection is open.</summary>
         /// <value><c>true</c> if this instance is open; otherwise, <c>false</c>.</value>
@@ -190,8 +191,6 @@ namespace APSIM.Shared.Utilities
                 connection.Dispose();
             }
             connectionPool.Clear();
-            fbDBConnection.Close();
-            fbDBConnection.Dispose();
         }
 
         /// <summary>
@@ -220,6 +219,28 @@ namespace APSIM.Shared.Utilities
             }
         }
 
+        /// <summary>Lock object.</summary>
+        private readonly object poolLockObject = new object();
+
+
+        private void CleanConnectionPool()
+        {
+            lock (poolLockObject)
+            {
+                foreach (var connData in connectionPool)
+                {
+                    Thread thread = connData.Key as Thread;
+                    if (!thread.IsAlive)
+                    {
+                        var connection = connData.Value;
+                        if (connection.State == ConnectionState.Open)
+                            connection.Close();
+                        connection.Dispose();
+                        connectionPool.Remove(thread);
+                    }
+                }
+            }
+        }
         private bool EnsureOpen()
         {
             if (!IsOpen)
@@ -305,6 +326,28 @@ namespace APSIM.Shared.Utilities
             return result;
         }
 
+        private string ExtractAlias(string s)
+        {
+            string result = s.Replace("\"", "").Trim();
+            int i = result.IndexOf(" AS ", StringComparison.InvariantCultureIgnoreCase);
+            if (i > -1)
+                result = result.Substring(i + 4, result.Length - (i + 4)).Trim();
+            return result;
+        }
+
+        private List<string> ParseFieldNames(string sql)
+        {
+            sql = sql.Replace(Environment.NewLine, " ");
+            int start = sql.IndexOf("SELECT ", StringComparison.InvariantCultureIgnoreCase) + 7;
+            int end = sql.IndexOf(" FROM ", StringComparison.InvariantCultureIgnoreCase);
+            if (start < 0 || end < 0)
+                return new List<string>();
+
+            string selects = sql.Substring(start, end - start);
+            var result = selects.Split(',').Select(s => ExtractAlias(s)).ToList();
+            return result;
+        }
+
         /// <summary>
         /// Executes a query and stores the results in a DataTable
         /// </summary>
@@ -319,12 +362,32 @@ namespace APSIM.Shared.Utilities
                 dt = new DataTable();
                 FbTransaction transaction = OpenTransaction();
                 FbCommand myCmd = new FbCommand(query, fbDBConnection, transaction);
+                List<string> fields = ParseFieldNames(query);
                 myCmd.CommandType = CommandType.Text;
 
                 try
                 {
                     FbDataAdapter da = new FbDataAdapter(myCmd);
                     da.Fill(dt);
+                    // UGLY HACK
+                    // The ADO driver for Firebird Embedded currently (version 9.1.1.) truncates the
+                    // column names in the returned DataTable to 31 characters. This is an attempt to
+                    // set the column names to their desired values.
+                    // This is far from fool-proof; for example, having "*" in the select list
+                    // could be problematic. That's one reason for comparing the number of columns with
+                    // the number of "fields" we think we have.
+                    if (fbDBServerType == FbServerType.Embedded && dt.Columns.Count == fields.Count)
+                    {
+                        int i = 0;
+                        foreach (string field in fields)
+                        {
+                            if (field.Length > 31)
+                            {
+                                dt.Columns[i].ColumnName = field;
+                            }
+                            i++;
+                        }
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -994,6 +1057,9 @@ namespace APSIM.Shared.Utilities
             }
         }
 
+        /// <summary>Lock object.</summary>
+        private readonly object msgLockObject = new object();
+
         /// <summary>
         /// Insert a single record from the "_Messages" table
         /// </summary>
@@ -1006,16 +1072,19 @@ namespace APSIM.Shared.Utilities
         /// <param name="table"></param>
         public void InsertMessageRecord(DataTable table)
         {
-            if (table.TableName != "_Messages")
-                throw new FirebirdException("Incorrect table passed to InsertMessageRecord");
+            lock (msgLockObject)
+            {
+                if (table.TableName != "_Messages")
+                    throw new FirebirdException("Incorrect table passed to InsertMessageRecord");
 
-            if (msgTable == null)
-                msgTable = table.Clone();
-            foreach (DataRow row in table.Rows)
-               msgTable.ImportRow(row);
+                if (msgTable == null)
+                    msgTable = table.Clone();
+                foreach (DataRow row in table.Rows)
+                    msgTable.ImportRow(row);
 
-            if (msgTable.Rows.Count >= 250)
-                WriteMsgTable();
+                if (msgTable.Rows.Count >= 250)
+                    WriteMsgTable();
+            }
         }
 
         /// <summary>

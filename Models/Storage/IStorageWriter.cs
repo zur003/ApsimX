@@ -74,7 +74,10 @@ namespace Models.Storage
         /// <summary>Wait for all records to be written.</summary>
         void WaitForIdle();
 
-        /// <summary>Stop all writing to database.</summary>
+        /// <summary>Immediately stop all writing to database.</summary>
+        void Cancel();
+
+        /// <summary>Finish writing to database.</summary>
         void Stop();
 
         /// <summary>
