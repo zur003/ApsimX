@@ -82,7 +82,7 @@ namespace UserInterface.Views
         /// <summary>Cleanup the instance.</summary>
         public void Cleanup()
         {
-            if (dataStore is SQLite)
+            if (connection is SQLite)
                 dataStore.ExecuteSql("DROP TABLE IF EXISTS keyset");
         }
 
@@ -146,12 +146,13 @@ namespace UserInterface.Views
         {
             PagingStart?.Invoke(this, new EventArgs());
             DataTable newData = null;
-            if (connection is SQLite)
+            //if (connection is SQLite)
                 newData = dataStore.GetData(tableName,
                                              checkpointName,
                                              simulationNames,
                                              columnNames,
                                              GetRollingCursorRowFilter(startRowIndex, pageSize));
+            /*
             else
                 newData = dataStore.GetData(tableName,
                                              checkpointName,
@@ -160,7 +161,7 @@ namespace UserInterface.Views
                                              null,
                                              startRowIndex,
                                              pageSize);
-            
+            */
  
             // Remove unwanted columns from data table.
             foreach (string columnName in DataTableUtilities.GetColumnNames(newData))
@@ -180,7 +181,7 @@ namespace UserInterface.Views
         private void CreateTemporaryKeyset()
         {
             string filter = GetFilter();
-            string sql;
+            string sql = String.Empty;
             if (connection is SQLite)
             {
                 Cleanup();
@@ -188,7 +189,15 @@ namespace UserInterface.Views
                          $"SELECT rowid FROM \"{tableName}\" ";
                 if (!string.IsNullOrEmpty(filter))
                     sql += $"WHERE {filter}";
-
+                dataStore.GetDataUsingSql(sql);
+            }
+            else if (connection is Firebird)
+            {
+                sql = "RECREATE GLOBAL TEMPORARY TABLE \"keyset\" (\"rowid\" BIGINT) ON COMMIT PRESERVE ROWS";
+                dataStore.GetDataUsingSql(sql);
+                sql = $"INSERT INTO \"keyset\" (\"rowid\") SELECT \"rowid\" FROM \"{tableName}\" ";
+                if (!string.IsNullOrEmpty(filter))
+                    sql += $"WHERE {filter}";
                 dataStore.GetDataUsingSql(sql);
             }
         }
@@ -201,17 +210,25 @@ namespace UserInterface.Views
         {
             string filter = GetFilter();
 
-            var data = dataStore.GetDataUsingSql($"SELECT rowid FROM keyset WHERE rowid >= {from + 1} ORDER BY rowid LIMIT {count}");
+            DataTable data = null;
+            if (connection is SQLite)
+            {
+                data = dataStore.GetDataUsingSql($"SELECT \"rowid\" FROM \"keyset\" WHERE \"rowid\" >= {from + 1} ORDER BY \"rowid\" LIMIT {count}");
+            }
+            else if (connection is Firebird)
+            {
+                data = dataStore.GetDataUsingSql($"SELECT FIRST {count} SKIP {from} \"rowid\" FROM \"keyset\" ORDER BY \"rowid\"");
+            }
 
             if (data is null)
                 return "";
 
-            var rowIds = DataTableUtilities.GetColumnAsIntegers(data, "rowid");
+            var rowIds = DataTableUtilities.GetColumnAsLongInts(data, "rowid");
             var rowIdsCSV = StringUtilities.Build(rowIds, ",");
 
             string returnFilter = String.Empty;
-            if (connection is SQLite)
-                returnFilter = $"RowID in ({rowIdsCSV})";
+            // if (connection is SQLite)
+                returnFilter = $"\"rowid\" in ({rowIdsCSV})";
             if (!string.IsNullOrEmpty(filter))
                 returnFilter += $" AND ({filter})";
             return returnFilter;
