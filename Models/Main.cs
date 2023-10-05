@@ -460,7 +460,7 @@ namespace Models
         {
             if (sender is SimulationGroup group)
             {
-                string fileName = Path.ChangeExtension(group.FileName, ".fdb");
+                string fileName = Path.ChangeExtension(group.FileName, ".db");
                 var storage = new Storage.DataStore(fileName);
                 Report.WriteAllTables(storage, fileName);
                 Console.WriteLine("Successfully created csv file " + Path.ChangeExtension(fileName, ".csv"));
