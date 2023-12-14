@@ -36,6 +36,7 @@ namespace UserInterface.Views
         private CellRendererText textRender;
         private const string modelMime = "application/x-model-component";
         private Timer timer = new Timer();
+        private bool isEdittingNodeLabel = false;
 
         /// <summary>
         /// Keep track of whether the accelerator group is attached to the toplevel window.
@@ -826,8 +827,6 @@ namespace UserInterface.Views
         {
             try
             {
-                if (textRender.Editable) // If the node to be dragged is open for editing (renaming), close it now.
-                    textRender.StopEditing(true);
                 DragStartArgs args = new DragStartArgs();
                 args.NodePath = SelectedNode; // FullPath(e.Item as TreeNode);
                 if (DragStarted != null)
@@ -855,6 +854,14 @@ namespace UserInterface.Views
         {
             try
             {
+                if (textRender.Editable)// If the node to be dragged is open for editing (renaming), close it now.
+                {
+                    textRender.StopEditing(true);
+                    isEdittingNodeLabel = false;
+                    treeview1.CursorChanged += OnAfterSelect;
+                    nodePathBeforeRename = "";
+                }
+
                 if (dragSourceHandle.IsAllocated)
                 {
                     dragSourceHandle.Free();
@@ -1016,10 +1023,12 @@ namespace UserInterface.Views
         {
             try
             {
-                treeview1.CursorChanged -= OnAfterSelect;
-                nodePathBeforeRename = SelectedNode;
-                // TreeView.ContextMenuStrip = null;
-                // e.CancelEdit = false;
+                if (isEdittingNodeLabel == false)
+                {
+                    isEdittingNodeLabel = true;
+                    treeview1.CursorChanged -= OnAfterSelect;
+                    nodePathBeforeRename = SelectedNode;
+                }
             }
             catch (Exception err)
             {
@@ -1034,20 +1043,24 @@ namespace UserInterface.Views
         {
             try
             {
-                textRender.Editable = false;
-                // TreeView.ContextMenuStrip = this.PopupMenu;
-                if (Renamed != null && !string.IsNullOrEmpty(e.NewText))
+                if (isEdittingNodeLabel == true)
                 {
-                    NodeRenameArgs args = new NodeRenameArgs()
+                    isEdittingNodeLabel = false;
+                    textRender.Editable = false;
+                    // TreeView.ContextMenuStrip = this.PopupMenu;
+                    if (Renamed != null && !string.IsNullOrEmpty(e.NewText))
                     {
-                        NodePath = this.nodePathBeforeRename,
-                        NewName = e.NewText
-                    };
-                    Renamed(this, args);
-                    if (!args.CancelEdit)
-                        previouslySelectedNodePath = args.NodePath;
+                        NodeRenameArgs args = new NodeRenameArgs()
+                        {
+                            NodePath = this.nodePathBeforeRename,
+                            NewName = e.NewText
+                        };
+                        Renamed(this, args);
+                        if (!args.CancelEdit)
+                            previouslySelectedNodePath = args.NodePath;
+                    }
+                    treeview1.CursorChanged += OnAfterSelect;
                 }
-                treeview1.CursorChanged += OnAfterSelect;
             }
             catch (Exception err)
             {
