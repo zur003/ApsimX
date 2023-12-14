@@ -8,11 +8,11 @@ namespace Models.Functions
     [Serializable]
     [PresenterName("UserInterface.Presenters.PropertyPresenter")]
     [ViewName("UserInterface.Views.PropertyView")]
-    [ValidParent(ParentType = typeof(CarbonFlow))]
+    [ValidParent(ParentType = typeof(OrganicFlow))]
     [ValidParent(ParentType = typeof(Nutrient))]
     public class CERESDecomposition : Model, IFunction
     {
-        [Link(ByName = true, Type = LinkType.Child)]
+        [Link(ByName = true)]
         private IFunction TF = null;
 
         [Link(ByName = true)]

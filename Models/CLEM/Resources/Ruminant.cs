@@ -1,3 +1,4 @@
+using APSIM.Shared.Utilities;
 using Models.CLEM.Groupings;
 using Models.CLEM.Interfaces;
 using Models.CLEM.Reporting;
@@ -101,13 +102,19 @@ namespace Models.CLEM.Resources
         /// <summary>
         /// Individual is suckling, still with mother and not weaned
         /// </summary>
-        public bool IsSucklingWithMother { get { return weaned < 0 && mother != null; } }
+        public bool IsSucklingWithMother { get { return weaned == 0 && mother != null; } }
 
         /// <summary>
         /// Sex of individual
         /// </summary>
         [FilterByProperty]
         public abstract Sex Sex { get; }
+
+        /// <summary>
+        /// Has the individual been sterilised (webbed, spayed or castrated)
+        /// </summary>
+        [FilterByProperty]
+        public abstract bool IsSterilised { get; }
 
         /// <summary>
         /// Marked as a replacement breeder
@@ -301,16 +308,7 @@ namespace Models.CLEM.Resources
         {
             get
             {
-                double result = 0;
-                double min = BreedParams.ProportionOfMaxWeightToSurvive * HighWeight;
-                double mid = NormalisedAnimalWeight;
-                double max = BreedParams.MaximumSizeOfIndividual;
-
-                if (weight < mid)
-                    result = Math.Round((mid - Math.Max(min, weight)) / ((mid - min) / 2.5)) * -1;
-                else if (weight > mid)
-                    result = Math.Round((weight - mid) / ((max - mid) / 2.5));
-                return Convert.ToInt32(result, CultureInfo.InvariantCulture);
+                throw new NotImplementedException("The Ruminant.HealthScore property is depeciated. Please use Body Condition Score.");
             }
         }
 
@@ -340,22 +338,25 @@ namespace Models.CLEM.Resources
                     return "Weaner";
                 else
                 {
-                    if (this is RuminantFemale)
+                    if (this is RuminantFemale female)
                     {
-                        if ((this as RuminantFemale).IsPreBreeder)
+                        if (female.IsPreBreeder)
                             return "PreBreeder";
-                        else
+                        else if (female.IsBreeder)
                             return "Breeder";
+                        else
+                            return "Sterilized";
                     }
                     else
                     {
-                        if ((this as RuminantMale).IsSire)
+                        var male = this as RuminantMale;
+                        if (male.IsSire)
                             return "Sire";
-                        else if ((this as RuminantMale).IsCastrated)
+                        else if (male.IsCastrated)
                             return "Castrate";
                         else
                         {
-                            if ((this as RuminantMale).IsWildBreeder)
+                            if (male.IsWildBreeder)
                             {
                                 return "Breeder";
                             }
@@ -455,10 +456,21 @@ namespace Models.CLEM.Resources
         {
             get
             {
-                if (PotentialIntake + MilkPotentialIntake > 0)
-                    return (Intake + MilkIntake) / (PotentialIntake + MilkPotentialIntake);
+                if (MilkPotentialIntake > 0)
+                {
+                    double prop = (MilkIntake / MilkPotentialIntake);
+                    if (MathUtilities.IsGreaterThanOrEqual(PotentialIntake, 0.0))
+                    {
+                        prop += (1 - (MilkIntake / MilkPotentialIntake)) * (Intake / PotentialIntake);
+                    }
+                    return prop;
+                }
                 else
-                    return 0;
+                {
+                    if (MathUtilities.IsGreaterThanOrEqual(PotentialIntake, 0.0))
+                        return Intake / PotentialIntake;
+                }
+                return 0;
             }
         }
 
@@ -677,6 +689,12 @@ namespace Models.CLEM.Resources
         public bool Weaned { get { return weaned > 0; } }
 
         /// <summary>
+        /// Weaned individual flag
+        /// </summary>
+        [FilterByProperty]
+        public bool IsWeaned { get { return weaned > 0; } }
+
+        /// <summary>
         /// Number of months since weaned
         /// </summary>
         [FilterByProperty]
@@ -799,7 +817,7 @@ namespace Models.CLEM.Resources
             IIndividualAttribute indAttribute = attribute.Value.GetInheritedAttribute() as IIndividualAttribute;
 
             // is this a property attribute that may modify the individuals parameter set?
-            if(indAttribute.SetAttributeSettings is SetAttributeWithProperty)
+            if(indAttribute?.SetAttributeSettings is SetAttributeWithProperty)
             {
                 // has the value changed from that in the breed params provided to the individual?
                 if (indAttribute.StoredValue != (attribute.Value.SetAttributeSettings as SetAttributeWithProperty).RuminantPropertyInfo.GetValue(this))
