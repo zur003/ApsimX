@@ -26,10 +26,8 @@ namespace Models.Core
         private static object compilingScriptLock = new object();
 
         private const string tempFileNamePrefix = "APSIM";
+
         [NonSerialized]
-
-
-
         private List<PreviousCompilation> previousCompilations = new List<PreviousCompilation>();
 
         /// <summary>Constructor.</summary>

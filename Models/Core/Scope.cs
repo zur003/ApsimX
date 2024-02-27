@@ -14,6 +14,8 @@ namespace Models.Core
     {
         private Dictionary<IModel, List<IModel>> cache = new Dictionary<IModel, List<IModel>>();
 
+        private readonly object cacheLock = new object();
+
         /// <summary>
         /// Return a list of models in scope to the one specified.
         /// </summary>
@@ -24,60 +26,64 @@ namespace Models.Core
             if (scopedParent == null)
                 throw new Exception("No scoping model found relative to: " + relativeTo.FullPath);
 
-            // Try the cache first.
-            List<IModel> modelsInScope;
-            if (cache.TryGetValue(scopedParent, out modelsInScope))
-                return modelsInScope.ToArray();
-
-            // The algorithm is to find the parent scoped model of the specified model.
-            // Then return all descendants of the scoped model and then recursively
-            // the direct children of the parents of the scoped model. For any direct
-            // child of the parents of the scoped model, we also return its descendants
-            // if it is not a scoped model.
-
-            // Return all models in zone and all direct children of zones parent.
-            modelsInScope = new List<IModel>();
-            modelsInScope.Add(scopedParent);
-            modelsInScope.AddRange(scopedParent.FindAllDescendants());
-            IModel m = scopedParent;
-            while (m.Parent != null)
+            lock (cacheLock)
             {
-                m = m.Parent;
-                modelsInScope.Add(m);
-                foreach (IModel child in m.Children)
-                {
-                    if (!modelsInScope.Contains(child))
-                    {
-                        modelsInScope.Add(child);
+                // Try the cache first.
+                List<IModel> modelsInScope;
+                if (cache.TryGetValue(scopedParent, out modelsInScope))
+                    return modelsInScope.ToArray();
 
-                        // Return the child's descendants if it is not a scoped model.
-                        // This ensures that a soil's water node will be in scope of
-                        // a manager inside a folder inside a zone.
-                        if (!IsScopedModel(child))
-                            modelsInScope.AddRange(child.FindAllDescendants());
+                // The algorithm is to find the parent scoped model of the specified model.
+                // Then return all descendants of the scoped model and then recursively
+                // the direct children of the parents of the scoped model. For any direct
+                // child of the parents of the scoped model, we also return its descendants
+                // if it is not a scoped model.
+
+                // Return all models in zone and all direct children of zones parent.
+                modelsInScope = new List<IModel>();
+                modelsInScope.Add(scopedParent);
+                modelsInScope.AddRange(scopedParent.FindAllDescendants());
+                IModel m = scopedParent;
+                while (m.Parent != null)
+                {
+                    m = m.Parent;
+                    modelsInScope.Add(m);
+                    foreach (IModel child in m.Children)
+                    {
+                        if (!modelsInScope.Contains(child))
+                        {
+                            modelsInScope.Add(child);
+
+                            // Return the child's descendants if it is not a scoped model.
+                            // This ensures that a soil's water node will be in scope of
+                            // a manager inside a folder inside a zone.
+                            if (!IsScopedModel(child))
+                                modelsInScope.AddRange(child.FindAllDescendants());
+                        }
                     }
                 }
+
+                if (!modelsInScope.Contains(m))
+                    modelsInScope.Add(m); // top level simulation
+
+                //scope may not work for models under experiment (that need to link back to the actual sim)
+                //so first we find models that are in scope (aka, also under the factor), then also return
+                //the descendants of the simulation
+                Experiment exp = relativeTo.FindAncestor<Experiment>();
+                if (exp != null)
+                {
+                    Simulation sim = exp.FindChild<Simulation>();
+
+                    IEnumerable<IModel> descendants = sim.FindAllDescendants();
+                    foreach (IModel result in descendants)
+                        modelsInScope.Add(result);
+                }
+
+                // add to cache for next time.
+                if (!cache.ContainsKey(scopedParent))
+                    cache.Add(scopedParent, modelsInScope);
+                return modelsInScope.ToArray();
             }
-
-            if (!modelsInScope.Contains(m))
-                modelsInScope.Add(m); // top level simulation
-
-            //scope may not work for models under experiment (that need to link back to the actual sim)
-            //so first we find models that are in scope (aka, also under the factor), then also return
-            //the descendants of the simulation
-            Experiment exp = relativeTo.FindAncestor<Experiment>();
-            if (exp != null)
-            {
-                Simulation sim = exp.FindChild<Simulation>();
-
-                IEnumerable<IModel> descendants = sim.FindAllDescendants();
-                foreach (IModel result in descendants)
-                    modelsInScope.Add(result);
-            }
-
-            // add to cache for next time.
-            cache.Add(scopedParent, modelsInScope);
-            return modelsInScope.ToArray();
         }
 
         /*
@@ -195,7 +201,10 @@ namespace Models.Core
         /// </summary>
         public void Clear()
         {
-            this.cache.Clear();
+            lock (cacheLock)
+            {
+                this.cache.Clear();
+            }
         }
     }
 }

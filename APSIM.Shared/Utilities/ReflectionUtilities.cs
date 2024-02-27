@@ -1,5 +1,6 @@
 ﻿namespace APSIM.Shared.Utilities
 {
+    using Force.DeepCloner;
     using Newtonsoft.Json;
     using Newtonsoft.Json.Serialization;
     using System;
@@ -9,6 +10,7 @@
     using System.IO;
     using System.Linq;
     using System.Reflection;
+    using System.Runtime.CompilerServices;
     using System.Runtime.Loader;
     using System.Runtime.Serialization;
     using System.Runtime.Serialization.Formatters.Binary;
@@ -626,15 +628,21 @@
                 return Convert.ToString(obj, format);
         }
 
+        static private readonly object cloneLock = new object();
+
         /// <summary>
         /// Perform a deep Copy of the specified object
         /// </summary>
         public static object Clone(object sourceObj)
         {
-            CachingSerializationBinder binder = new CachingSerializationBinder();
-            Stream stream = BinarySerialise(sourceObj, binder);
-            stream.Seek(0, SeekOrigin.Begin);
-            return BinaryDeserialise(stream, binder);
+            //lock (cloneLock)
+           // {
+                return sourceObj.DeepClone();
+            //}
+            //CachingSerializationBinder binder = new CachingSerializationBinder();
+            //Stream stream = BinarySerialise(sourceObj, binder);
+            //stream.Seek(0, SeekOrigin.Begin);
+            //return BinaryDeserialise(stream, binder);
         }
 
         /// <summary>

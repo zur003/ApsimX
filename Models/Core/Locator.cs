@@ -5,6 +5,7 @@ using System.Globalization;
 using System.Linq;
 using System.Reflection;
 using APSIM.Shared.Utilities;
+using Microsoft.CodeAnalysis;
 
 namespace Models.Core
 {
@@ -39,7 +40,10 @@ namespace Models.Core
         /// <summary>Clear the cache</summary>
         public void Clear()
         {
-            cache.Clear();
+            lock (cacheLock)
+            {
+                cache.Clear();
+            }
         }
 
         /// <summary>
@@ -49,7 +53,10 @@ namespace Models.Core
         /// <param name="path"></param>
         public void ClearEntry(string path)
         {
-            cache.Remove(path);
+            lock (cacheLock)
+            {
+                cache.Remove(path);
+            }
         }
 
         /// <summary>
@@ -123,6 +130,8 @@ namespace Models.Core
             return false;
         }
 
+        private readonly object cacheLock = new object();
+
         /// <summary>
         /// Get the value of a variable or model.
         /// </summary>
@@ -162,9 +171,13 @@ namespace Models.Core
             //check if path is actually an expression
             if (IsExpression(namePath))
             {
-                returnVariable = new VariableExpression(namePath, relativeTo as Model);
-                cache.Add(cacheKey, returnVariable);
-                return returnVariable;
+                lock (cacheLock)
+                {
+                    returnVariable = new VariableExpression(namePath, relativeTo as Model);
+                    if (!cache.ContainsKey(cacheKey))
+                        cache.Add(cacheKey, returnVariable);
+                    return returnVariable;
+                }
             }
             
             namePath = namePath.Replace("Value()", "Value().");
@@ -308,7 +321,13 @@ namespace Models.Core
 
             // Add variable to cache.
             if (!onlyModelChildren) //don't add this to the cache if it's been found by skipping properties/methods
-                cache.Add(cacheKey, returnVariable);
+            {
+                lock (cacheLock)
+                {
+                    if (!cache.ContainsKey(cacheKey))
+                        cache.Add(cacheKey, returnVariable);
+                }
+            }
             return returnVariable;
         }
 
