@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -28,7 +29,7 @@ namespace Models.Core
         /// A cache for speeding up look ups. The object can be either 
         /// Model[] or an IVariable.
         /// </summary>
-        private Dictionary<string, object> cache = new Dictionary<string, object>();
+        private ConcurrentDictionary<string, object> cache = new ConcurrentDictionary<string, object>();
 
         /// <summary>Constructor</summary>
         /// <param name="relativeTo">Model locator is relative to</param>
@@ -40,10 +41,7 @@ namespace Models.Core
         /// <summary>Clear the cache</summary>
         public void Clear()
         {
-            lock (cacheLock)
-            {
-                cache.Clear();
-            }
+            cache.Clear();
         }
 
         /// <summary>
@@ -53,10 +51,8 @@ namespace Models.Core
         /// <param name="path"></param>
         public void ClearEntry(string path)
         {
-            lock (cacheLock)
-            {
-                cache.Remove(path);
-            }
+            object obj;
+            cache.TryRemove(path, out obj);
         }
 
         /// <summary>
@@ -130,8 +126,6 @@ namespace Models.Core
             return false;
         }
 
-        private readonly object cacheLock = new object();
-
         /// <summary>
         /// Get the value of a variable or model.
         /// </summary>
@@ -171,13 +165,9 @@ namespace Models.Core
             //check if path is actually an expression
             if (IsExpression(namePath))
             {
-                lock (cacheLock)
-                {
-                    returnVariable = new VariableExpression(namePath, relativeTo as Model);
-                    if (!cache.ContainsKey(cacheKey))
-                        cache.Add(cacheKey, returnVariable);
-                    return returnVariable;
-                }
+                returnVariable = new VariableExpression(namePath, relativeTo as Model);
+                cache.TryAdd(cacheKey, returnVariable);
+                return returnVariable;
             }
             
             namePath = namePath.Replace("Value()", "Value().");
@@ -322,11 +312,7 @@ namespace Models.Core
             // Add variable to cache.
             if (!onlyModelChildren) //don't add this to the cache if it's been found by skipping properties/methods
             {
-                lock (cacheLock)
-                {
-                    if (!cache.ContainsKey(cacheKey))
-                        cache.Add(cacheKey, returnVariable);
-                }
+                cache.TryAdd(cacheKey, returnVariable);
             }
             return returnVariable;
         }
