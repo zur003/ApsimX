@@ -628,21 +628,12 @@
                 return Convert.ToString(obj, format);
         }
 
-        static private readonly object cloneLock = new object();
-
         /// <summary>
         /// Perform a deep Copy of the specified object
         /// </summary>
         public static object Clone(object sourceObj)
         {
-            //lock (cloneLock)
-           // {
-                return sourceObj.DeepClone();
-            //}
-            //CachingSerializationBinder binder = new CachingSerializationBinder();
-            //Stream stream = BinarySerialise(sourceObj, binder);
-            //stream.Seek(0, SeekOrigin.Begin);
-            //return BinaryDeserialise(stream, binder);
+            return sourceObj.DeepClone();
         }
 
         /// <summary>
