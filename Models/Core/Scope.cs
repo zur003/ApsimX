@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -13,7 +12,7 @@ namespace Models.Core
     /// </summary>
     public class ScopingRules
     {
-        private ConcurrentDictionary<IModel, List<IModel>> cache = new ConcurrentDictionary<IModel, List<IModel>>();
+        private Dictionary<IModel, List<IModel>> cache = new Dictionary<IModel, List<IModel>>();
 
         /// <summary>
         /// Return a list of models in scope to the one specified.
@@ -77,7 +76,7 @@ namespace Models.Core
             }
 
             // add to cache for next time.
-            cache.TryAdd(scopedParent, modelsInScope);
+            cache.Add(scopedParent, modelsInScope);
             return modelsInScope.ToArray();
         }
 

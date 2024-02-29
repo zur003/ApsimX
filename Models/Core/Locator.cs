@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -29,7 +28,7 @@ namespace Models.Core
         /// A cache for speeding up look ups. The object can be either 
         /// Model[] or an IVariable.
         /// </summary>
-        private ConcurrentDictionary<string, object> cache = new ConcurrentDictionary<string, object>();
+        private Dictionary<string, object> cache = new Dictionary<string, object>();
 
         /// <summary>Constructor</summary>
         /// <param name="relativeTo">Model locator is relative to</param>
@@ -51,8 +50,7 @@ namespace Models.Core
         /// <param name="path"></param>
         public void ClearEntry(string path)
         {
-            object obj;
-            cache.TryRemove(path, out obj);
+            cache.Remove(path);
         }
 
         /// <summary>
@@ -166,7 +164,7 @@ namespace Models.Core
             if (IsExpression(namePath))
             {
                 returnVariable = new VariableExpression(namePath, relativeTo as Model);
-                cache.TryAdd(cacheKey, returnVariable);
+                cache.Add(cacheKey, returnVariable);
                 return returnVariable;
             }
             
@@ -312,7 +310,7 @@ namespace Models.Core
             // Add variable to cache.
             if (!onlyModelChildren) //don't add this to the cache if it's been found by skipping properties/methods
             {
-                cache.TryAdd(cacheKey, returnVariable);
+                cache.Add(cacheKey, returnVariable);
             }
             return returnVariable;
         }
