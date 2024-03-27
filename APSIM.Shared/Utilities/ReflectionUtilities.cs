@@ -1,6 +1,6 @@
 ﻿namespace APSIM.Shared.Utilities
 {
-    using Force.DeepCloner;
+    using DeepCloner.Core;
     using Newtonsoft.Json;
     using Newtonsoft.Json.Serialization;
     using System;
@@ -633,6 +633,7 @@
         /// </summary>
         public static object Clone(object sourceObj)
         {
+            DeepClonerExtensions.SetSuppressedAttributes(typeof(NonSerializedAttribute));
             return sourceObj.DeepClone();
         }
 
