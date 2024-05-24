@@ -1,8 +1,15 @@
 ﻿namespace APSIM.Shared.Utilities
 {
     using DeepCloner.Core;
+    using DocumentFormat.OpenXml.Bibliography;
+    using DocumentFormat.OpenXml.EMMA;
+    using DocumentFormat.OpenXml.Office2016.Drawing.ChartDrawing;
+    using DocumentFormat.OpenXml.Office2016.Drawing.Charts;
     using Newtonsoft.Json;
+    using Newtonsoft.Json.Converters;
+    using Newtonsoft.Json.Linq;
     using Newtonsoft.Json.Serialization;
+    using SkiaSharp;
     using System;
     using System.Collections;
     using System.Collections.Generic;
@@ -14,6 +21,7 @@
     using System.Runtime.Loader;
     using System.Runtime.Serialization;
     using System.Runtime.Serialization.Formatters.Binary;
+    using System.Xml.Serialization;
 
     /// <summary>
     /// Utility class with reflection functions
@@ -396,6 +404,9 @@
         /// </summary>
         public static Stream BinarySerialise(object source, SerializationBinder binder = null)
         {
+            // XmlSerialiseToStream(source);
+            return JsonSerialiseToStream(source);
+            /*
             if (source == null)
                 return null;
 
@@ -406,7 +417,7 @@
             formatter.Binder = binder;
             Stream stream = new MemoryStream();
             formatter.Serialize(stream, source);
-            return stream;
+            return stream;*/
         }
 
         /// <summary>
@@ -414,12 +425,15 @@
         /// </summary>
         public static object BinaryDeserialise(Stream stream, SerializationBinder binder = null)
         {
+            return JsonDeserialize(stream);
+            /*
             if (stream == null)
                 return null;
 
             IFormatter formatter = new BinaryFormatter();
             formatter.Binder = binder;
             return formatter.Deserialize(stream);
+            */
         }
 #pragma warning restore SYSLIB0011
 
@@ -435,9 +449,84 @@
             return JsonConvert.SerializeObject(source, Formatting.Indented,
                     new JsonSerializerSettings
                     {
-                        ContractResolver = new DynamicContractResolver(includePrivates, includeChildren),
+                        ContractResolver = new DynamicContractResolver(includePrivates, includeChildren, false),
                         ReferenceLoopHandling = ReferenceLoopHandling.Ignore
                     });
+        }
+
+        /// <summary>
+        /// Serializes to XML
+        /// </summary>
+        /// <param name="source"></param>
+        /// <returns></returns>
+        public static Stream XmlSerialiseToStream(object source)
+        {
+            XmlSerializer mySerializer = new XmlSerializer(source.GetType());
+            // To write to a file, create a StreamWriter object.  
+            MemoryStream xmlStream = new MemoryStream();
+            StreamWriter writer = new StreamWriter(xmlStream);
+            mySerializer.Serialize(writer, source);
+            writer.Flush();
+            using (StreamReader sr = new StreamReader(xmlStream))
+            {
+                xmlStream.Position = 0;
+                string xmlString = sr.ReadToEnd();
+            }
+            return xmlStream;
+        }
+
+        /// <summary>
+        /// Convert an object into a json stream. 
+        /// </summary>
+        /// <param name="source">The source object.</param>
+        /// <returns>The string representation of the object.</returns>
+        public static Stream JsonSerialiseToStream(object source)
+        {
+            JsonSerializerSettings jSettings = new JsonSerializerSettings()
+            {
+                ContractResolver = new DynamicContractResolver(true, true, true),
+                ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
+                TypeNameHandling = TypeNameHandling.Objects,
+                NullValueHandling = NullValueHandling.Include,
+                ObjectCreationHandling = ObjectCreationHandling.Replace,
+                DefaultValueHandling = DefaultValueHandling.Include
+            };
+            string jString = JsonConvert.SerializeObject(source, Formatting.Indented, jSettings);
+            MemoryStream jStream = new MemoryStream();
+            StreamWriter writer = new StreamWriter(jStream);
+            writer.Write(jString);
+            writer.Flush();
+
+            jStream.Position = 0; ;
+            return jStream;
+            
+        }
+        
+        /// <summary>
+        /// Convert a JSON stream into an object
+        /// </summary>
+        /// <param name="jStream"></param>
+        /// <returns></returns>
+        public static object JsonDeserialize(Stream jStream)
+        {
+            if (jStream == null)
+                return null;
+
+            using (StreamReader sr = new StreamReader(jStream))
+            {
+                string jString = sr.ReadToEnd();
+                JsonSerializerSettings jSettings = new JsonSerializerSettings()
+                {
+                    ContractResolver = new DynamicContractResolver(true, true, true),
+                    ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
+                    TypeNameHandling = TypeNameHandling.Objects,
+                    NullValueHandling = NullValueHandling.Include,
+                    ObjectCreationHandling = ObjectCreationHandling.Replace,
+                    DefaultValueHandling = DefaultValueHandling.Include,
+                    ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor
+                };
+                return JsonConvert.DeserializeObject(jString, jSettings);
+            } 
         }
 
         ///<summary> Custom Contract resolver to stop deseralization of Parent properties </summary>
@@ -445,10 +534,12 @@
         {
             private BindingFlags bindingFlags = BindingFlags.Public | BindingFlags.Instance | BindingFlags.FlattenHierarchy;
             private readonly bool includeChildren;
+            private readonly bool excludeReadonly;
 
-            public DynamicContractResolver(bool includePrivates, bool includeChildren)
+            public DynamicContractResolver(bool includePrivates, bool includeChildren, bool excludeReadonly)
             {
                 this.includeChildren = includeChildren;
+                this.excludeReadonly = excludeReadonly;
                 if (includePrivates)
                     bindingFlags |= BindingFlags.NonPublic;
             }
@@ -460,6 +551,8 @@
                 if (!includeChildren)
                     properties = properties.Where(p => p.PropertyName != "Children");
                 List<JsonProperty> props = fields.Union(properties).ToList();
+                if (excludeReadonly)
+                    props = props.Where(p => p.Writable).ToList();
 
                 // If this type overrides a base class's property or field, then this list
                 // will contain multiple properties with the same name, which causes a
@@ -470,6 +563,14 @@
                 props.ForEach(p => { p.Writable = true; });
                 return props.Where(p => p.PropertyName != "Parent" && p.Readable).ToList();
             }
+
+            protected override JsonContract CreateContract(Type objectType)
+            {
+                JsonContract contract = base.CreateContract(objectType);
+
+                return contract;
+            }
+
         }
 
         /// <summary>
@@ -633,8 +734,23 @@
         /// </summary>
         public static object Clone(object sourceObj)
         {
+            /*
+            Type objType = sourceObj.GetType();
+            JsonSerializerSettings jSettings = new JsonSerializerSettings()
+            {
+                ContractResolver = new DynamicContractResolver(true, true, true),
+                ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
+                TypeNameHandling = TypeNameHandling.Objects,
+                NullValueHandling = NullValueHandling.Include,
+                ObjectCreationHandling = ObjectCreationHandling.Replace,
+                DefaultValueHandling = DefaultValueHandling.Ignore
+            };
+            String jString = JsonConvert.SerializeObject(sourceObj, Formatting.Indented, jSettings);
+            */
             DeepClonerExtensions.SetSuppressedAttributes(typeof(NonSerializedAttribute));
-            return sourceObj.DeepClone();
+            object compare = sourceObj.DeepClone();
+            // object retVal = JsonConvert.DeserializeObject(jString, objType, jSettings);
+            return compare;
         }
 
         /// <summary>
