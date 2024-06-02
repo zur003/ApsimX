@@ -525,7 +525,11 @@
                     DefaultValueHandling = DefaultValueHandling.Include,
                     ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor
                 };
-                return JsonConvert.DeserializeObject(jString, jSettings);
+                object result = JsonConvert.DeserializeObject(jString, jSettings);
+                if (result is JArray)
+                    return JsonConvert.DeserializeObject<System.Data.DataTable>(jString);
+                else
+                    return result;
             } 
         }
 
