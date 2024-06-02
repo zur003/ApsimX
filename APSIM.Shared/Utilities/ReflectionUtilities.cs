@@ -1,15 +1,9 @@
 ﻿namespace APSIM.Shared.Utilities
 {
     using DeepCloner.Core;
-    using DocumentFormat.OpenXml.Bibliography;
-    using DocumentFormat.OpenXml.EMMA;
-    using DocumentFormat.OpenXml.Office2016.Drawing.ChartDrawing;
-    using DocumentFormat.OpenXml.Office2016.Drawing.Charts;
     using Newtonsoft.Json;
-    using Newtonsoft.Json.Converters;
     using Newtonsoft.Json.Linq;
     using Newtonsoft.Json.Serialization;
-    using SkiaSharp;
     using System;
     using System.Collections;
     using System.Collections.Generic;
@@ -17,10 +11,8 @@
     using System.IO;
     using System.Linq;
     using System.Reflection;
-    using System.Runtime.CompilerServices;
     using System.Runtime.Loader;
     using System.Runtime.Serialization;
-    using System.Runtime.Serialization.Formatters.Binary;
     using System.Xml.Serialization;
 
     /// <summary>
@@ -392,51 +384,6 @@
             return null;
         }
 
-// Note that Microsoft considers use of BinaryFormatter to be "unsafe". 
-// However, we should be OK if we are reasonably sure that we deserialise only
-// objects that we have ourselves serialised. This pragma allow us to use it without
-// having the compiler generate a warning message.
-// (Also note that ApsimX is inherently unsafe in any case, as its Manager allows execution
-// of virtually anything.)
-#pragma warning disable SYSLIB0011
-        /// <summary>
-        /// Binary serialise the object and return the resulting stream.
-        /// </summary>
-        public static Stream BinarySerialise(object source, SerializationBinder binder = null)
-        {
-            // XmlSerialiseToStream(source);
-            return JsonSerialiseToStream(source);
-            /*
-            if (source == null)
-                return null;
-
-            if (!source.GetType().IsSerializable)
-                throw new ArgumentException("The type must be serializable.", "source");
-
-            IFormatter formatter = new BinaryFormatter();
-            formatter.Binder = binder;
-            Stream stream = new MemoryStream();
-            formatter.Serialize(stream, source);
-            return stream;*/
-        }
-
-        /// <summary>
-        /// Binary deserialise the specified stream and return the resulting object
-        /// </summary>
-        public static object BinaryDeserialise(Stream stream, SerializationBinder binder = null)
-        {
-            return JsonDeserialize(stream);
-            /*
-            if (stream == null)
-                return null;
-
-            IFormatter formatter = new BinaryFormatter();
-            formatter.Binder = binder;
-            return formatter.Deserialize(stream);
-            */
-        }
-#pragma warning restore SYSLIB0011
-
         /// <summary>
         /// Convert an object into a json string. 
         /// </summary>
@@ -452,27 +399,6 @@
                         ContractResolver = new DynamicContractResolver(includePrivates, includeChildren, false),
                         ReferenceLoopHandling = ReferenceLoopHandling.Ignore
                     });
-        }
-
-        /// <summary>
-        /// Serializes to XML
-        /// </summary>
-        /// <param name="source"></param>
-        /// <returns></returns>
-        public static Stream XmlSerialiseToStream(object source)
-        {
-            XmlSerializer mySerializer = new XmlSerializer(source.GetType());
-            // To write to a file, create a StreamWriter object.  
-            MemoryStream xmlStream = new MemoryStream();
-            StreamWriter writer = new StreamWriter(xmlStream);
-            mySerializer.Serialize(writer, source);
-            writer.Flush();
-            using (StreamReader sr = new StreamReader(xmlStream))
-            {
-                xmlStream.Position = 0;
-                string xmlString = sr.ReadToEnd();
-            }
-            return xmlStream;
         }
 
         /// <summary>
@@ -507,7 +433,7 @@
         /// </summary>
         /// <param name="jStream"></param>
         /// <returns></returns>
-        public static object JsonDeserialize(Stream jStream)
+        public static object JsonDeserialise(Stream jStream)
         {
             if (jStream == null)
                 return null;
