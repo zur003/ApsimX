@@ -452,6 +452,16 @@
                     ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor
                 };
                 object result = JsonConvert.DeserializeObject(jString, jSettings);
+                // Newtonsoft Json cannot readily determine the object type when
+                // deserializing a DataTable. If the DataTable is a field within another object,
+                // tagging with [JsonConverter(typeof(DataTableConverter))] fixes the problem, but 
+                // a stand-alone DataTable is problematic, and will just deserialize to a JArray.
+                // This can be a problem in APSIM.Server and associated unit tests. Here we do
+                // a clumsy work-around by assuming a returned JArray should really be treated
+                // as a DataTable, and force it to be deserialized as such. Note, however, that
+                // the Name of the DataTable is not available with this procedure.
+                // This should work with our limited use of JSON in the context of APSIM.Server,
+                // but could be a problem if applied in other contexts.
                 if (result is JArray)
                     return JsonConvert.DeserializeObject<System.Data.DataTable>(jString);
                 else
@@ -664,23 +674,8 @@
         /// </summary>
         public static object Clone(object sourceObj)
         {
-            /*
-            Type objType = sourceObj.GetType();
-            JsonSerializerSettings jSettings = new JsonSerializerSettings()
-            {
-                ContractResolver = new DynamicContractResolver(true, true, true),
-                ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
-                TypeNameHandling = TypeNameHandling.Objects,
-                NullValueHandling = NullValueHandling.Include,
-                ObjectCreationHandling = ObjectCreationHandling.Replace,
-                DefaultValueHandling = DefaultValueHandling.Ignore
-            };
-            String jString = JsonConvert.SerializeObject(sourceObj, Formatting.Indented, jSettings);
-            */
             DeepClonerExtensions.SetSuppressedAttributes(typeof(NonSerializedAttribute));
-            object compare = sourceObj.DeepClone();
-            // object retVal = JsonConvert.DeserializeObject(jString, objType, jSettings);
-            return compare;
+            return sourceObj.DeepClone();
         }
 
         /// <summary>
