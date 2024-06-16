@@ -5,7 +5,6 @@ using System.Globalization;
 using System.Linq;
 using System.Reflection;
 using APSIM.Shared.Utilities;
-using Microsoft.CodeAnalysis;
 
 namespace Models.Core
 {
@@ -309,9 +308,7 @@ namespace Models.Core
 
             // Add variable to cache.
             if (!onlyModelChildren) //don't add this to the cache if it's been found by skipping properties/methods
-            {
                 cache.Add(cacheKey, returnVariable);
-            }
             return returnVariable;
         }
 

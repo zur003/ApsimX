@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -25,7 +24,10 @@ namespace Models.Core
         private static Resource instance = null;
 
         /// <summary>A cache of models from resource.</summary>
-        private readonly ConcurrentDictionary<string, ResourceModel> cache = new ConcurrentDictionary<string, ResourceModel>();
+        private readonly Dictionary<string, ResourceModel> cache = new Dictionary<string, ResourceModel>();
+
+        /// <summary>A lock for the cache.</summary>
+        private readonly object cacheLock = new object();
 
         /// <summary>Singleton instance of Resource</summary>
         public static Resource Instance
@@ -198,12 +200,18 @@ namespace Models.Core
         {
             if (!cache.TryGetValue(resourceName, out ResourceModel modelFromResource))
             {
+                lock (cacheLock)
+                {
+                    if (!cache.TryGetValue(resourceName, out modelFromResource))
+            {
                 string contents = GetString(resourceName);
                 if (string.IsNullOrEmpty(contents))
                     return null;
 
                 modelFromResource = new ResourceModel(contents);
-                cache.TryAdd(resourceName, modelFromResource);
+                        cache.Add(resourceName, modelFromResource);
+                    }
+                }
             }
             return modelFromResource;
         }

@@ -291,11 +291,6 @@ namespace UserInterface.Views
             {
                 return textEditor.Buffer.CursorPosition;
             }
-            set
-            {
-                TextIter iter = textEditor.Buffer.GetIterAtOffset(value);
-                textEditor.Buffer.PlaceCursor(iter);
-            }
         }
 
         /// <summary>
