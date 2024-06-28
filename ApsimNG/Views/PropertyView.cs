@@ -203,7 +203,7 @@ namespace UserInterface.Views
                 foreach (Grid grid in oldPropertyTables)
                 {
                     grid.DetachAllHandlers();
-                    grid.Destroy();
+                    ///// grid.Destroy();
                     grid.Dispose();
                 }
 
@@ -358,7 +358,7 @@ namespace UserInterface.Views
                     else if (property.DisplayMethod == PropertyType.Directory)
                         fileChooserButton.Clicked += (o, _) => ChooseFile(o as Widget, false, true);
 
-                    Box container = new HBox();
+                    Box container = new Box(Orientation.Horizontal, 0);
                     container.PackStart(fileNameInput, true, true, 0);
                     container.PackStart(fileChooserButton, false, false, 0);
                     component = container;
@@ -753,7 +753,7 @@ namespace UserInterface.Views
         /// <param name="e">Event arguments.</param>
         protected void mainWidget_Destroyed(object sender, EventArgs e)
         {
-            propertyTable.Destroy();
+            ///// propertyTable.Destroy();
             propertyTable.Dispose();
             mainWidget.DetachAllHandlers();
             mainWidget.Destroyed -= mainWidget_Destroyed;

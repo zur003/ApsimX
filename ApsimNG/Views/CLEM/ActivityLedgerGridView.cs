@@ -245,7 +245,7 @@ namespace UserInterface.Views
 
             if (MasterView.MainWindow != null)
             {
-                MasterView.MainWindow.Cursor = new Gdk.Cursor(Gdk.CursorType.Watch);
+                MasterView.MainWindow.Cursor = new Gdk.Cursor(Gdk.Display.Default, Gdk.CursorType.Watch);
             }
 
             ClearGridColumns();

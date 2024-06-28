@@ -162,7 +162,7 @@ namespace APSIM.Interop.Mapping
             };
             result.BackColor = Mapsui.Styles.Color.FromString("LightBlue");
 
-            Mapsui.Layers.TileLayer osmLayer = OpenStreetMap.CreateTileLayer("APSIM Next Generation");
+            TileLayer osmLayer = OpenStreetMap.CreateTileLayer("APSIM Next Generation");
             if (osmLayer.TileSource is BruTile.Web.HttpTileSource)
             {
                 BruTile.Cache.FileCache fileCache = new BruTile.Cache.FileCache(Path.Combine(Path.GetTempPath(), "OSM Map Tiles"), "png", new TimeSpan(100, 0, 0, 0));

@@ -3,7 +3,7 @@
 /// <summary>
 /// Temporary class for math utilities.
 /// </summary>
-public static class mu
+public static class Mu
 {
 
     //TODO: Replace these methods with Utility.Math versions once you have the numbers matching up.

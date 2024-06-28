@@ -56,25 +56,25 @@ namespace UserInterface.Views
             Grid3 = new ContainerView(owner);
             Grid4 = new ContainerView(owner);
 
-            VBox Grid1Box = new VBox();
+            Box Grid1Box = new Box(Orientation.Vertical, 0);
             grid1Label = new Label();
             grid1Label.Markup = "";
             Grid1Box.PackStart(grid1Label, false, false, 0);
             Grid1Box.PackEnd(Grid1.MainWidget, true, true, 0);
 
-            VBox Grid2Box = new VBox();
+            Box Grid2Box = new Box(Orientation.Vertical, 0);
             grid2Label = new Label();
             grid2Label.Markup = "";
             Grid2Box.PackStart(grid2Label, false, false, 0);
             Grid2Box.PackEnd(Grid2.MainWidget, true, true, 0);
 
-            VBox Grid3Box = new VBox();
+            Box Grid3Box = new Box(Orientation.Vertical, 0);
             grid3Label = new Label();
             grid3Label.Markup = "";
             Grid3Box.PackStart(grid3Label, false, false, 0);
             Grid3Box.PackEnd(Grid3.MainWidget, true, true, 0);
 
-            VBox Grid4Box = new VBox();
+            Box Grid4Box = new Box(Orientation.Vertical, 0);
             grid4Label = new Label();
             grid4Label.Markup = "";
             Grid4Box.PackStart(grid4Label, false, false, 0);

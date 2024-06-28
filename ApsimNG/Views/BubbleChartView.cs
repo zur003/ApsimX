@@ -192,7 +192,7 @@ namespace UserInterface.Views
             if (isDrawingArc)
             {
                 isDrawingArc = false;
-                mainWidget.Window.Cursor = new Cursor(CursorType.Arrow);
+                mainWidget.Window.Cursor = new Cursor(Gdk.Display.Default, CursorType.Arrow);
                 return;
             }
 
@@ -464,7 +464,7 @@ namespace UserInterface.Views
         {
             if (graphView.SelectedObjects.Count == 1)
             {
-                mainWidget.Window.Cursor = new Cursor(CursorType.DiamondCross);
+                mainWidget.Window.Cursor = new Cursor(Gdk.Display.Default, CursorType.DiamondCross);
                 isDrawingArc = true;
 
                 graphView.isDrawingArc = true;

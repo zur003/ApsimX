@@ -97,7 +97,7 @@ namespace UserInterface.Views
 
         private bool inRightClick = false;
 
-        private OxyPlot.GtkSharp.PlotView plot1;
+        private PlotView plot1;
         private Box vbox1 = null;
         private Expander expander1 = null;
         private Box vbox2 = null;

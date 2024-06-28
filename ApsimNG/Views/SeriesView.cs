@@ -90,7 +90,7 @@
             helpBox = new EventBox();
             helpBox.Add(helpImage);
             helpBox.ButtonReleaseEvent += Help_ButtonPressEvent;
-            HBox filterBox = new HBox();
+            Box filterBox = new Box(Orientation.Horizontal, 0);
             filterBox.PackStart(editView1.MainWidget, true, true, 0);
             filterBox.PackEnd(helpBox, false, true, 0);
 

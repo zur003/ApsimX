@@ -395,7 +395,7 @@ namespace UserInterface.Views
                 tabLabel.Text = Path.GetFileNameWithoutExtension(text);
             else
                 tabLabel.Text = text;
-            HBox headerBox = new HBox();
+            Box headerBox = new Box(Orientation.Horizontal, 0);
             Button closeBtn = new Button();
             string imageName = Utility.Configuration.Settings.DarkTheme ? "Close.dark.svg" : "Close.light.svg";
             Gtk.Image closeImg = new Gtk.Image(new Gdk.Pixbuf(null, $"ApsimNG.Resources.TreeViewImages.{imageName}", 12, 12));
@@ -536,7 +536,7 @@ namespace UserInterface.Views
             label.Visible = true;
 
             // Attach the label and icon together
-            HBox box = new HBox(false, 4);
+            Box box = new Box(Orientation.Horizontal, 4);
             box.PackStart(image, false, true, 0);
             box.PackStart(label, false, true, 0);
             box.Visible = true;
@@ -937,7 +937,7 @@ namespace UserInterface.Views
             box.ShowAll();
             box.Realize();
             box.ShowAll();
-            moreInfo.ParentWindow.Cursor = new Gdk.Cursor(Gdk.CursorType.Arrow);
+            moreInfo.ParentWindow.Cursor = new Gdk.Cursor(Gdk.Display.Default, Gdk.CursorType.Arrow);
         }
 
         [GLib.ConnectBefore]
@@ -1157,7 +1157,7 @@ namespace UserInterface.Views
             {
                 if (MainWindow != null)
                 {
-                    MainWindow.Cursor = value ? new Gdk.Cursor(Gdk.CursorType.Watch) : null;
+                    MainWindow.Cursor = value ? new Gdk.Cursor(Gdk.Display.Default, Gdk.CursorType.Watch) : null;
                     waiting = value;
                 }
             }

@@ -909,7 +909,7 @@ namespace Utility
             {
                 if (dialog1.Toplevel.Window != null)
                 {
-                    dialog1.Toplevel.Window.Cursor = value ? new Gdk.Cursor(Gdk.CursorType.Watch) : null;
+                    dialog1.Toplevel.Window.Cursor = value ? new Gdk.Cursor(Gdk.Display.Default, Gdk.CursorType.Watch) : null;
                     waiting = value;
                 }
             }

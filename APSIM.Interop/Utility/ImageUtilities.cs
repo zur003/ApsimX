@@ -3,7 +3,7 @@ using System.Drawing;
 using System.IO;
 using DocumentFormat.OpenXml.Drawing.Charts;
 using SkiaSharp;
-using Svg;
+// using Svg;
 
 namespace APSIM.Interop.Utility
 {
@@ -40,6 +40,7 @@ namespace APSIM.Interop.Utility
                 }
         }
 
+        /*
         /// <summary>
         /// Convert an svg image into a raster.
         /// </summary>
@@ -55,5 +56,6 @@ namespace APSIM.Interop.Utility
             SvgDocument doc = SvgDocument.Open<SvgDocument>(stream);
             return doc.Draw(width, height);
         }
+        */
     }
 }

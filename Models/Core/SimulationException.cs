@@ -19,6 +19,7 @@ namespace Models.Core
         /// </summary>
         public string FileName { get; private set; }
 
+/*
         /// <summary>
         /// Constructor provided for binary deserialization.
         /// </summary>
@@ -29,6 +30,7 @@ namespace Models.Core
             SimulationName = info.GetString(nameof(SimulationName));
             FileName = info.GetString(nameof(FileName));
         }
+*/
 
         /// <summary>
         /// /// Create a <see cref="SimulationException" /> instance.
@@ -63,6 +65,7 @@ namespace Models.Core
             return $"ERROR in file: {FileName}{Environment.NewLine}Simulation name: {SimulationName}{Environment.NewLine}{base.ToString()}";
         }
 
+        /*
         /// <summary>
         /// Get object data for serialization.
         /// </summary>
@@ -74,5 +77,6 @@ namespace Models.Core
             info.AddValue(nameof(SimulationName), SimulationName);
             info.AddValue(nameof(FileName), FileName);
         }
+        */
     }
 }
