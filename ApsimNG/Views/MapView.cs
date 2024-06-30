@@ -151,7 +151,7 @@ namespace UserInterface.Views
             container = new Gtk.EventBox();
             container.Add(image);
 
-            VPaned box = new VPaned();
+            Paned box = new Paned(Orientation.Vertical);
             PropertiesView = new PropertyView(this);
             box.Add1(((ViewBase)PropertiesView).MainWidget);
 

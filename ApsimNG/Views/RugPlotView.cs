@@ -338,8 +338,9 @@
 #pragma warning restore 0612
 
                 CairoContext drawingContext = new CairoContext(context, rugCanvas);
-                Gdk.Rectangle rug = new Gdk.Rectangle(); 
-                rugCanvas.GetAllocatedSize(rug);
+                Gdk.Rectangle rug = new Gdk.Rectangle();
+                int baseline;
+                rugCanvas.GetAllocatedSize(out rug, out baseline);
                 SetupXfrms(rug.Size);
                 Draw(drawingContext);
 

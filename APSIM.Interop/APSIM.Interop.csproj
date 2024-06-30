@@ -14,7 +14,7 @@
   <ItemGroup>
     <ProjectReference Include="../APSIM.Shared/APSIM.Shared.csproj" />
     <ProjectReference Include="../Models/Models.csproj" />
-    <PackageReference Include="CairoSharp" Version="3.22.25.128" />
+    <PackageReference Include="CairoSharp" Version="3.24.24.95" />
     <PackageReference Include="Mapsui" Version="3.0.2" />
     <PackageReference Include="Markdig" Version="0.37.0" />
     <PackageReference Include="MathNet.Numerics" Version="5.0.0" />
