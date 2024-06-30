@@ -73,7 +73,7 @@ namespace Utility
         public void Destroy()
         {
             Utility.GtkUtilities.DetachAllHandlers(window1);
-            ///// window1.Destroy();
+            window1.Destroy();
             window1.Dispose();
         }
 

@@ -203,7 +203,7 @@ namespace UserInterface.Views
                 foreach (Grid grid in oldPropertyTables)
                 {
                     grid.DetachAllHandlers();
-                    ///// grid.Destroy();
+                    grid.Destroy();
                     grid.Dispose();
                 }
 
@@ -753,7 +753,7 @@ namespace UserInterface.Views
         /// <param name="e">Event arguments.</param>
         protected void mainWidget_Destroyed(object sender, EventArgs e)
         {
-            ///// propertyTable.Destroy();
+            propertyTable.Destroy();
             propertyTable.Dispose();
             mainWidget.DetachAllHandlers();
             mainWidget.Destroyed -= mainWidget_Destroyed;

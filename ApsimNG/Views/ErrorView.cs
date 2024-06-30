@@ -67,26 +67,11 @@ namespace UserInterface.Views
 
             closeButton = new Button("Close");
             closeButton.Clicked += Close;
-            // Replacment for Alignment needs testing
-            closeButton.Halign = Align.Fill;
-            closeButton.Valign = Align.Fill;
-            //Alignment alignCloseButton = new Alignment(1, 1, 0, 0)
-            //{
-            //    closeButton
-            //};
             
             copyButton = new Button("Copy");
             copyButton.Clicked += Copy;
-            copyButton.Halign = Align.Start;
-            copyButton.Valign = Align.Fill;
-            //Alignment alignCopyButton = new Alignment(0, 1, 0, 0)
-            //{
-            //    copyButton
-            //};
 
             Box buttonContainer = new Box(Orientation.Horizontal, 0);
-            //buttonContainer.PackStart(alignCopyButton, false, false, 0);
-            //buttonContainer.PackEnd(alignCloseButton, false, false, 0);
             buttonContainer.PackStart(copyButton, false, false, 0);
             buttonContainer.PackEnd(closeButton, false, false, 0);
 
