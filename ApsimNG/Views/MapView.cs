@@ -246,7 +246,7 @@ namespace UserInterface.Views
             Rectangle rect = GtkUtilities.GetBorderOfRightHandView(this);
             Point pos = GtkUtilities.GetPositionOfWidget(mainWidget);
             viewport.Width = rect.Width;
-            viewport.Height = rect.Height - (mainWidget as VPaned).Position + pos.Y;
+            viewport.Height = rect.Height - (mainWidget as Paned).Position + pos.Y;
         }
 
         private void OsmLayer_DataChanged(object sender, Mapsui.Fetcher.DataChangedEventArgs e)
