@@ -37,16 +37,16 @@ namespace UserInterface.Views
         private Gtk.Label grid4Label;
 
         /// <summary>Label at top of window</summary>
-        private Gtk.VPaned vpaned1;
+        private Gtk.Paned vpaned1;
 
         /// <summary>Holder of the 4 tables</summary>
-        private Gtk.HPaned vpaned2;
+        private Gtk.Paned vpaned2;
 
         /// <summary>Label at top of window</summary>
-        private Gtk.VPaned vpaned3;
+        private Gtk.Paned vpaned3;
 
         /// <summary>Label at top of window</summary>
-        private Gtk.VPaned vpaned4;
+        private Gtk.Paned vpaned4;
 
         /// <summary>Constructor</summary>
         public GridView(ViewBase owner) : base(owner)
@@ -86,16 +86,16 @@ namespace UserInterface.Views
             descriptionLabel = (Gtk.Label)builder.GetObject("label1");
             descriptionLabel.LineWrap = true;
 
-            vpaned1 = (VPaned)builder.GetObject("vpaned1");
+            vpaned1 = (Paned)builder.GetObject("vpaned1");
             this.SetLabelHeight(0.1f);
 
-            vpaned2 = (HPaned)builder.GetObject("vpaned2");
+            vpaned2 = (Paned)builder.GetObject("vpaned2");
 
-            vpaned3 = (VPaned)builder.GetObject("vpaned3");
+            vpaned3 = (Paned)builder.GetObject("vpaned3");
             vpaned3.Pack1(Grid1Box, true, true);
             vpaned3.Pack2(Grid2Box, true, true);
 
-            vpaned4 = (VPaned)builder.GetObject("vpaned4");
+            vpaned4 = (Paned)builder.GetObject("vpaned4");
             vpaned4.Pack1(Grid3Box, true, true);
             vpaned4.Pack2(Grid4Box, true, true);
 

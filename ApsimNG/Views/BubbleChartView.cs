@@ -42,12 +42,12 @@ namespace UserInterface.Views
         /// <summary>Invoked when the user deletes an arc</summary>
         public event EventHandler<GraphObjectsArgs> DelArc;
 
-        private HPaned topPaned;
-        private HBox chartBox = null;
-        private HPaned settingsPaned = null;
-        private HBox propertiesBox = null;
+        private Paned topPaned;
+        private Box chartBox = null;
+        private Paned settingsPaned = null;
+        private Box propertiesBox = null;
         private Frame objectFrame = null;
-        private HBox objectBox = null;
+        private Box objectBox = null;
         private Label instructionsLabel = null;
         private DirectedGraphView graphView;
 
@@ -83,18 +83,18 @@ namespace UserInterface.Views
             int widthOfWindow = explorererBounds.Width;
             int horizontalSplitterPosition = (int)(widthOfWindow * 0.6);
 
-            (mainWidget as VPaned).Position = splitterPosition;
+            (mainWidget as Paned).Position = splitterPosition;
 
-            topPaned = (Gtk.HPaned)builder.GetObject("top_paned");
+            topPaned = (Gtk.Paned)builder.GetObject("top_paned");
             topPaned.Position = horizontalSplitterPosition;
 
-            chartBox = (Gtk.HBox)builder.GetObject("chart_box");
-            settingsPaned = (Gtk.HPaned)builder.GetObject("settings_paned");
+            chartBox = (Gtk.Box)builder.GetObject("chart_box");
+            settingsPaned = (Gtk.Paned)builder.GetObject("settings_paned");
             settingsPaned.Position = (int)(widthOfWindow * 0.4);
 
-            propertiesBox = (Gtk.HBox)builder.GetObject("properties_box");
-            objectBox = (Gtk.HBox)builder.GetObject("object_box");
-            HBox instructionsBox = (Gtk.HBox)builder.GetObject("instructions_box");
+            propertiesBox = (Gtk.Box)builder.GetObject("properties_box");
+            objectBox = (Gtk.Box)builder.GetObject("object_box");
+            Box instructionsBox = (Gtk.Box)builder.GetObject("instructions_box");
 
             graphView = new DirectedGraphView(this);
             chartBox.Add(graphView.MainWidget);
