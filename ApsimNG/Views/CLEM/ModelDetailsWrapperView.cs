@@ -46,7 +46,7 @@ namespace UserInterface.Views
             Gtk.CssProvider css_provider = new CssProvider();
             css_provider.LoadFromData(css);
 
-            hbox =  new Box(Orientation.Horizontal, 0);
+            hbox = new Box(Orientation.Horizontal, 0);
             vbox1 = new Box(Orientation.Vertical, 0);
             labels = new Box(Orientation.Vertical, 0);
 

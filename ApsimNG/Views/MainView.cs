@@ -481,7 +481,7 @@ namespace UserInterface.Views
                 EventBox ebox = (EventBox)notebook.GetTabLabel(tab);
                 ebox.TooltipText = tooltip;
                 ebox.HasTooltip = !String.IsNullOrEmpty(tooltip);
-                // The EventBox holds an HBox
+                // The EventBox holds an Box
                 Box hbox = (Box)ebox.Child;
                 // And the Box has the actual label as its first child
                 Label tabLabel = (Label)hbox.Children[0];
@@ -537,6 +537,7 @@ namespace UserInterface.Views
 
             // Attach the label and icon together
             Box box = new Box(Orientation.Horizontal, 4);
+            box.Homogeneous = false;
             box.PackStart(image, false, true, 0);
             box.PackStart(label, false, true, 0);
             box.Visible = true;

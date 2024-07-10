@@ -343,7 +343,7 @@ namespace UserInterface.Views
                 case PropertyType.Files:
                 case PropertyType.Directory:
                     //case PropertyType.Directories:
-                    // Add an Entry and a Button inside a VBox.
+                    // Add an Entry and a Button inside a Box.
                     Entry fileNameInput = new Entry(property.Value?.ToString() ?? "");
                     fileNameInput.Name = property.ID.ToString();
                     fileNameInput.FocusOutEvent += UpdateText;

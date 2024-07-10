@@ -23,6 +23,7 @@ namespace UserInterface.Views
         public ListButtonView(ViewBase owner) : base(owner)
         {
             vbox = new Box(Orientation.Vertical, 0);
+            vbox.Homogeneous = false;
             mainWidget = vbox;
             buttonPanel = new Box(Orientation.Horizontal, 0);
             // buttonPanel.Layout = ButtonBoxStyle.Start;

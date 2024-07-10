@@ -66,7 +66,8 @@
 
         public RugPlotView(ViewBase owner = null) : base(owner)
         {
-            Box vbox1 = new Box(Orientation.Vertical, 0);
+            Box vbox1 =  new Box(Orientation.Vertical, 0);
+            vbox1.Homogeneous = false;
             mainWidget = vbox1;
             mainWidget.Destroyed += OnDestroyed;
 
@@ -339,7 +340,7 @@
 #pragma warning restore 0612
 
                 CairoContext drawingContext = new CairoContext(context, rugCanvas);
-                Gdk.Rectangle rug = new Gdk.Rectangle();
+                Gdk.Rectangle rug = new Gdk.Rectangle(); 
                 int baseline;
                 rugCanvas.GetAllocatedSize(out rug, out baseline);
                 SetupXfrms(rug.Size);

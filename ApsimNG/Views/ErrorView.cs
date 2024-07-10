@@ -67,7 +67,6 @@ namespace UserInterface.Views
 
             closeButton = new Button("Close");
             closeButton.Clicked += Close;
-            
             copyButton = new Button("Copy");
             copyButton.Clicked += Copy;
 

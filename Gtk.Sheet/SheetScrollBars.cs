@@ -63,7 +63,7 @@ namespace Gtk.Sheet
         private void Initialise()
         {
             var horizontalAdjustment = new Adjustment(1, 0, 100, 1, 1, 1);
-            horizontalScrollbar = new Scrollbar(Orientation.Horizontal,horizontalAdjustment);
+            horizontalScrollbar = new Scrollbar(Orientation.Horizontal, horizontalAdjustment);
             horizontalScrollbar.Value = 0;
             horizontalScrollbar.ValueChanged += OnHorizontalScrollbarChanged;
 
