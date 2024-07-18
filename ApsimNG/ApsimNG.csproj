@@ -32,9 +32,9 @@
     <ProjectReference Include="..\Models\Models.csproj" />
     <ProjectReference Include="..\APSIM.Server\V1\APSIM.Server.csproj" />
     <ProjectReference Include="..\Gtk.Sheet\Gtk.Sheet.csproj" />
+    <PackageReference Include="ClosedXML" Version="0.102.2" />
 	
     <!-- Shared package references -->
-    <PackageReference Include="ClosedXML" Version="0.104.0-preview2" />
     <PackageReference Include="Microsoft.Azure.Batch" Version="16.2.0" />
     <PackageReference Include="Microsoft.Azure.Storage.Blob" Version="11.2.3" />
     <PackageReference Include="Microsoft.Azure.Storage.Common" Version="11.2.3" />
