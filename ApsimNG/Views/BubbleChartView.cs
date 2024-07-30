@@ -97,8 +97,8 @@ namespace UserInterface.Views
             Box instructionsBox = (Gtk.Box)builder.GetObject("instructions_box");
 
             graphView = new DirectedGraphView(this);
-            chartBox.Add(graphView.MainWidget);
             graphView.AddArc += OnAddArcEnd;
+            chartBox.Add(graphView.MainWidget);
 
             PropertiesView = new PropertyView(this);
             Gtk.Frame propertyFrame = new Gtk.Frame(" Properties: ");

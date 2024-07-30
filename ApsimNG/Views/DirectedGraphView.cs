@@ -110,6 +110,7 @@ namespace UserInterface.Views
         public DirectedGraphView(ViewBase owner = null) : base(owner)
         {
             drawable = new DrawingArea();
+
             drawable.AddEvents(
             (int)Gdk.EventMask.PointerMotionMask
             | (int)Gdk.EventMask.ButtonPressMask
@@ -121,13 +122,13 @@ namespace UserInterface.Views
             drawable.ButtonPressEvent += OnMouseButtonPress;
             drawable.ButtonReleaseEvent += OnMouseButtonRelease;
             drawable.MotionNotifyEvent += OnMouseMove;
+            drawable.Expand = true;
 
             ScrolledWindow scroller = new ScrolledWindow()
             {
                 HscrollbarPolicy = PolicyType.Always,
                 VscrollbarPolicy = PolicyType.Always
             };
-
 
             // In gtk3, a viewport will automatically be added if required.
             scroller.Add(drawable);
