@@ -5,7 +5,8 @@
     <TargetFrameworks>net8.0</TargetFrameworks>
     <BaseOutputPath>../bin</BaseOutputPath>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+	<WarningsNotAsErrors>NU1902;NU1903</WarningsNotAsErrors>
+	<GenerateDocumentationFile>true</GenerateDocumentationFile>
     <SelfContained>false</SelfContained>
   </PropertyGroup>
 
@@ -18,7 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Markdig" Version="0.38.0" />
+    <PackageReference Include="Markdig" Version="0.37.0" />
   </ItemGroup>
   
   <PropertyGroup>
