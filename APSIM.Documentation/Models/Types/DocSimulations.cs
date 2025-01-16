@@ -33,24 +33,26 @@ namespace APSIM.Documentation.Models.Types
             List<ITag> tags = new List<ITag>();
             Simulations sims = model as Simulations;
             
+            bool documentFile = false;
+
             if (!string.IsNullOrEmpty(sims.FileName))
             {
                 if (sims.FileName.Contains(PATH_REVIEW) || sims.FileName.Contains(PATH_REVIEW.Replace('/', '\\')) ||
                     sims.FileName.Contains(PATH_VALIDATION) || sims.FileName.Contains(PATH_VALIDATION.Replace('/', '\\')))
                 {
                     tags.AddRange(DocumentValidation(model as Simulations));
+                    documentFile = true;
                 }
                 else if (sims.FileName.Contains(PATH_TUTORIAL) || sims.FileName.Contains(PATH_TUTORIAL.Replace('/', '\\')))
                 {
                     tags.AddRange(DocumentTutorial(model as Simulations));
+                    documentFile = true;
                 }
-                else
-                {
-                    foreach(IModel child in sims.FindAllChildren())
-                    {
-                        tags.AddRange(AutoDocumentation.DocumentModel(child));
-                    }
-                }
+            }
+
+            if (!documentFile)
+            {
+                tags.Add(GetSummaryAndRemarksSection(sims));
             }
 
             return tags;
@@ -202,6 +204,7 @@ namespace APSIM.Documentation.Models.Types
                 {"Mungbean", new DocAdditions(videoLink:"https://www.youtube.com/watch?v=nyDZkT1JTXw")},
                 {"Stock", new DocAdditions("https://grazplan.csiro.au/wp-content/uploads/2007/08/TechPaperMay12.pdf")},
                 {"SWIM", new DocAdditions("https://www.apsim.info/wp-content/uploads/2024/12/SWIMv21UserManual.pdf")},
+                {"SorghumDCaPST", new DocAdditions("https://www.apsim.info/wp-content/uploads/2024/12/APSIM-DCaPS.model.documentation.v4_Wu.et.al-1.pdf")}
             };
 
             if(validationAdditions.ContainsKey(name))
