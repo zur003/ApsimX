@@ -680,7 +680,7 @@ namespace Models.Core
                 }
                 else if (this.DataType == typeof(float[]))
                 {
-                    this.Value = Array.ConvertAll(MathUtilities.StringsToDoubles(stringValues), value => (float)value); 
+                    this.Value = Array.ConvertAll(MathUtilities.StringsToDoubles(stringValues), value => (float)value);
                 }
                 else if (this.DataType == typeof(int[]))
                 {

@@ -8,8 +8,7 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-	<WarningsNotAsErrors>NU1902;NU1903</WarningsNotAsErrors>
-	<SelfContained>false</SelfContained>
+    <SelfContained>false</SelfContained>
   </PropertyGroup>
   
   <PropertyGroup>
