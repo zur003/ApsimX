@@ -11,11 +11,11 @@
 	<WarningsNotAsErrors>NU1902;NU1903</WarningsNotAsErrors>
 	<SelfContained>false</SelfContained>
   </PropertyGroup>
-  
+
   <PropertyGroup>
    <ErrorOnDuplicatePublishOutputFiles>false</ErrorOnDuplicatePublishOutputFiles>
   </PropertyGroup>
-  
+
   <ItemGroup>
     <PackageReference Include="DocumentFormat.OpenXml" Version="3.2.0" />
     <PackageReference Include="ExcelDataReader.DataSet" Version="3.7.0" />
@@ -26,7 +26,7 @@
     <PackageReference Include="System.Drawing.Common" Version="8.0.6" />
     <PackageReference Include="Docker.DotNet" Version="3.125.15" />
   </ItemGroup>
-  
+
   <ItemGroup>
     <ProjectReference Include="..\DeepCloner.Core\DeepCloner.Core.csproj" />
   </ItemGroup>

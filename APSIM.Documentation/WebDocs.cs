@@ -14,6 +14,7 @@ using APSIM.Documentation.Bibliography;
 using Models.Core.ApsimFile;
 using APSIM.Shared.Mapping;
 using SkiaSharp;
+using APSIM.Documentation.Graphing;
 
 namespace APSIM.Documentation
 {
@@ -23,28 +24,15 @@ namespace APSIM.Documentation
     public static class WebDocs
     {
         /// <summary>
-        /// 
+        /// Gets a html page as a string generated from an apsimx file.
         /// </summary>
         public static string GetPage(string apsimDirectory, string name)
         {
             if(name == "CLEM Documentation site")
                 return "";
-            string validationPath = apsimDirectory + "/Tests/Validation/";
-            string[] validations = Directory.GetDirectories(apsimDirectory + "/Tests/Validation/");
-            for(int i = 0;i < validations.Length; i++)
-                validations[i] = validations[i].Replace(validationPath, "").Replace(".apsimx", "");
-
-            string examplesPath = apsimDirectory + "/Examples/";
-            string tutorialPath = "Tutorials/";
-            string lifecyclePath = "Lifecycle/";
-            string clemPath = "CLEM/";
-            string[] tutorials = Directory.GetFiles(apsimDirectory + "/Examples/Tutorials/", "*.apsimx", SearchOption.AllDirectories);
-            string[] clemTutorials = Directory.GetFiles(apsimDirectory + "/Examples/CLEM/", "*.apsimx", SearchOption.AllDirectories);
-            tutorials = tutorials.Concat(clemTutorials).ToArray();
-            for(int i = 0;i < tutorials.Length; i++)
-                tutorials[i] = tutorials[i].Replace(examplesPath, "").Replace(".apsimx", "").
-                Replace(tutorialPath,"").Replace("\\","/").
-                Replace(lifecyclePath,"").Replace(clemPath,"");
+            
+            string[] validations = GetValidationFolderNames(apsimDirectory);
+            string[] tutorials = GetTutorialFileNames(apsimDirectory);
 
             string filename = name;
             if (filename == "AGPRyegrass" || filename == "AGPWhiteClover")
@@ -67,6 +55,12 @@ namespace APSIM.Documentation
             if (tutorials.Contains(filename))
                 isTutorial = true;
 
+            if(filename == "SorghumDCaPST")
+            {
+                name = "DCaPST/Sorghum";
+                isValidation = true;
+            }
+
             filename += ".apsimx";
             
             string path = apsimDirectory;
@@ -83,7 +77,7 @@ namespace APSIM.Documentation
             else
                 throw new Exception($"Provided name \"{name}\", does not match any validation folders or tutorial files.");
 
-            Simulations sims = FileFormat.ReadFromFile<Simulations>(path, e => throw e, true).NewModel as Simulations;
+            Simulations sims = FileFormat.ReadFromFile<Simulations>(path, e => throw e, false, compileManagerScripts: false).NewModel as Simulations;
             return GenerateWeb(sims);
         }
 
@@ -136,6 +130,7 @@ namespace APSIM.Documentation
                 int lastHash =  output2.LastIndexOf("#");
                 output2 = output2.Substring(0, lastHash);
                 output2 = output2.Replace("<a href=\"#references\"><div class=\"docs-nav\">References</div></a>\n", "");
+                tags.RemoveAt(tags.Count-1);
             }
 
             var pipeline = new MarkdownPipelineBuilder().UseAdvancedExtensions().Build();
@@ -169,6 +164,7 @@ namespace APSIM.Documentation
             {
                 if (tag is Section section)
                 {
+
                     string id = section.Title.ToLower().Replace(" ", "-");
                     html += $"<a href=\"#{id}\"><div class=\"docs-nav\">{section.Title}</div></a>\n";
                 }
@@ -332,6 +328,12 @@ namespace APSIM.Documentation
                 {
                     output += $"![Video]({video.Source})\n";
                 }
+                else if (tag is Graph graph)
+                {
+                    SKImage graphImage = GetGraphImage(graph);
+                    string imgMarkdown = GetMarkdownImageFromSKImage(graphImage);
+                    output += imgMarkdown;
+                }
             }
             return output;
         }
@@ -360,7 +362,7 @@ namespace APSIM.Documentation
                     if (citation != null)
                     {
                         citations.Add(citation);
-                        output = output.Replace(value, citation.InTextCite);
+                        output = output.Replace(value, $"[{citation.InTextCite}](#references)");
                     }
                 }
             }
@@ -579,6 +581,69 @@ namespace APSIM.Documentation
                 }
             }
             return formattedLines.ToList();
+        }
+
+
+        /// <summary>
+        /// Gets an array of the folder names in the validation folder.
+        /// </summary>
+        /// <param name="apsimDirectory"></param>
+        /// <returns></returns>
+        private static string[] GetValidationFolderNames(string apsimDirectory)
+        {
+            string validationPath = apsimDirectory + "/Tests/Validation/";
+            string[] validations = Directory.GetDirectories(apsimDirectory + "/Tests/Validation/");
+            string[] dcapstValidations = Directory.GetDirectories(apsimDirectory + "/Tests/Validation/DCaPST");
+
+            validations.Concat(dcapstValidations).ToArray();
+
+            for(int i = 0;i < validations.Length; i++)
+                validations[i] = validations[i].Replace(validationPath, "").Replace(".apsimx", "");
+            return validations;
+        }
+
+        /// <summary>
+        /// Get tutorial file names from the tutorials folder.
+        /// </summary>
+        /// <param name="apsimDirectory"></param>
+        /// <returns></returns>
+        private static string[] GetTutorialFileNames(string apsimDirectory)
+        {
+            string examplesPath = apsimDirectory + "/Examples/";
+            string tutorialPath = "Tutorials/";
+            string lifecyclePath = "Lifecycle/";
+            string clemPath = "CLEM/";
+            string[] tutorials = Directory.GetFiles(apsimDirectory + "/Examples/Tutorials/", "*.apsimx", SearchOption.AllDirectories);
+            string[] clemTutorials = Directory.GetFiles(apsimDirectory + "/Examples/CLEM/", "*.apsimx", SearchOption.AllDirectories);
+            
+            tutorials = tutorials.Concat(clemTutorials).ToArray();
+
+            for(int i = 0;i < tutorials.Length; i++)
+                tutorials[i] = tutorials[i].Replace(examplesPath, "").Replace(".apsimx", "").
+                Replace(tutorialPath,"").Replace("\\","/").
+                Replace(lifecyclePath,"").Replace(clemPath,"");
+
+            return tutorials;
+        }
+
+        /// <summary>
+        /// Get an image from a graph tag
+        /// </summary>
+        /// <param name="graph"></param>
+        /// <returns></returns>
+        private static SKImage GetGraphImage(Graph graph)
+        {
+            GraphExporter exporter = new GraphExporter();
+
+            var plot = exporter.ToPlotModel(graph);
+
+            // Temp hack - set marker size to 5. We need to review
+            // appropriate sizing for graphs in autodocs.
+            if (plot is OxyPlot.PlotModel model)
+                foreach (var series in model.Series.OfType<OxyPlot.Series.LineSeries>())
+                    series.MarkerSize = 5;
+
+            return exporter.Export(plot, 800, 600);
         }
 
     }

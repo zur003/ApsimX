@@ -25,6 +25,7 @@ namespace Models.Core
         /// </summary>
         /// <param name="info">Serialization info.</param>
         /// <param name="context">Streaming context.</param>
+        [Obsolete]
         public SimulationException(SerializationInfo info, StreamingContext context) : base(info, context)
         {
             SimulationName = info.GetString(nameof(SimulationName));
@@ -71,6 +72,7 @@ namespace Models.Core
         /// </summary>
         /// <param name="info">Serialization info.</param>
         /// <param name="context">Streaming context.</param>
+        [Obsolete]
         public override void GetObjectData(SerializationInfo info, StreamingContext context)
         {
             base.GetObjectData(info, context);
